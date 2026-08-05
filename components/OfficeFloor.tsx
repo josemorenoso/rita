@@ -317,43 +317,47 @@ function drawProps(
 ) {
   const { x, y, w, h } = d;
 
-  // Server rack in the corner, LEDs blinking.
-  rect(x + 6, y + 20, 10, 22, "#131B42");
-  rect(x + 6, y + 20, 10, 2, "#1E2A5E");
-  for (let i = 0; i < 5; i++) {
+  // Props live in the empty band between the two desk rows, so they never
+  // collide with an agent or their workstation.
+  const band = y + 42;
+
+  // Server rack, LEDs blinking.
+  rect(x + 6, band, 9, 16, "#131B42");
+  rect(x + 6, band, 9, 2, "#1E2A5E");
+  for (let i = 0; i < 4; i++) {
     const on = Math.sin(t * 3 + i * 1.7 + x) > 0;
-    rect(x + 8, y + 24 + i * 4, 6, 1, on ? d.accent : "#1B2350");
+    rect(x + 8, band + 5 + i * 3, 5, 1, on ? d.accent : "#1B2350");
   }
 
-  // Plant against the far wall.
-  const px = x + w - 12;
-  const py = y + h - 14;
+  // Whiteboard with shifting content.
+  rect(x + w - 32, band + 2, 24, 12, "#0C1233");
+  rect(x + w - 32, band + 2, 24, 1, "#2A3568");
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < 3; i++) {
+    const len = 5 + ((Math.floor(t * 0.6) + i * 3) % 13);
+    rect(x + w - 29, band + 5 + i * 3, len, 1, d.accent);
+  }
+  ctx.globalAlpha = 1;
+
+  // Plant in the far corner.
+  const px = x + w - 11;
+  const py = y + h - 15;
   rect(px, py + 6, 6, 5, "#2A2036");
   rect(px + 1, py + 1, 4, 5, "#2E8F63");
   rect(px + 2, py - 1, 2, 3, "#3FBF83");
-
-  // Whiteboard with shifting content.
-  rect(x + w - 34, y + 20, 22, 14, "#0C1233");
-  rect(x + w - 34, y + 20, 22, 1, "#2A3568");
-  ctx.globalAlpha = 0.7;
-  for (let i = 0; i < 3; i++) {
-    const len = 6 + ((Math.floor(t * 0.6) + i * 3) % 12);
-    rect(x + w - 31, y + 24 + i * 3, len, 1, d.accent);
-  }
-  ctx.globalAlpha = 1;
 }
 
 function drawDesk(rect: (x: number, y: number, w: number, h: number, c: string) => void, a: AgentState) {
-  const dx = a.homeX - 10;
-  const dy = a.homeY - 6;
-  // Desks stay put even when the agent walks away.
+  // The desk sits at the agent's feet and extends left, so the monitor never
+  // lands on top of the body. Desks stay put even when the agent walks away.
+  const dx = a.homeX - 17;
+  const dy = a.homeY - 2;
   rect(dx, dy, 20, 6, "#1D2550");
   rect(dx, dy, 20, 1, "#2B3672");
   rect(dx, dy + 6, 20, 1, "#0A0F28");
-  // Monitor on the left so it never covers the face.
-  rect(dx + 2, dy - 6, 8, 6, "#101740");
-  rect(dx + 3, dy - 5, 6, 4, a.def.palette.accent);
-  rect(dx + 5, dy, 2, 1, "#1A2350");
+  rect(dx + 3, dy - 6, 8, 6, "#101740");
+  rect(dx + 4, dy - 5, 6, 4, a.def.palette.accent);
+  rect(dx + 6, dy - 1, 2, 1, "#1A2350");
 }
 
 function drawAgent(
