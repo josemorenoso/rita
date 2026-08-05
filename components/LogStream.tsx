@@ -1,7 +1,6 @@
 "use client";
 
 import { ACCENT } from "@/lib/world";
-import { eur } from "@/lib/format";
 import type { LogLine } from "@/lib/types";
 
 export default function LogStream({ log }: { log: LogLine[] }) {
@@ -17,7 +16,7 @@ export default function LogStream({ log }: { log: LogLine[] }) {
             <span className="log-dept" />
             <span className="log-agent">{l.agent}</span>
             <span className="log-text">{l.text}</span>
-            <span className="log-value">+{eur(l.value)}</span>
+            <span className={l.isMoney ? "log-value money" : "log-value"}>{l.result}</span>
           </li>
         ))}
       </ul>

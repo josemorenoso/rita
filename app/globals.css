@@ -213,6 +213,7 @@ button {
 .floor-frame {
   flex: 1;
   min-height: 0;
+  container-type: size;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,8 +223,10 @@ button {
 
 .floor-wrap {
   position: relative;
-  width: 100%;
-  max-height: 100%;
+  /* Fit the widest 16:9 box that clears both axes. Using max-height alongside
+     aspect-ratio lets the height clamp win and skews the world, which pushes
+     the two lower rooms off-canvas. */
+  width: min(100cqw, 100cqh * 384 / 216);
   aspect-ratio: 384 / 216;
   border: 1px solid var(--line);
   background: var(--void);
@@ -410,9 +413,15 @@ button {
 }
 
 .log-value {
-  color: var(--green);
+  color: var(--accent);
   font-size: 10.5px;
   letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.log-value.money {
+  color: var(--green);
+  opacity: 1;
 }
 
 /* ───────────────────────────── panels ───────────────────────────── */

@@ -10,7 +10,7 @@ export default function NexusPanel({ snap, onClose }: { snap: Snapshot; onClose:
   const saving = m.humanCostToday - m.agentCostToday;
   const savingPct = (saving / m.humanCostToday) * 100;
   const maxDeptRuns = Math.max(...DEPTS.map((d) => m.byDept[d.id].runs), 1);
-  const target = 32_000;
+  const target = 1_150;
   const targetPct = Math.min(100, (m.revenueToday / target) * 100);
 
   return (
@@ -36,7 +36,7 @@ export default function NexusPanel({ snap, onClose }: { snap: Snapshot; onClose:
         </div>
         <div className="hero-foot">
           <span>{dec(targetPct)} % del objetivo diario</span>
-          <span>meta {eurCompact(target)}</span>
+          <span>meta {eur(target)} · 25 k € / mes</span>
         </div>
       </section>
 

@@ -7,6 +7,13 @@ const HOUR_RATE = 12 / 3600;
 const WALK_SPEED = 11; // art units per second
 const PACKET_SECONDS = 1.35;
 
+/** Stretches every agent's cadence so the floor reads as a small company. */
+const CADENCE = 3;
+/** Share of runs that book revenue. The rest produce work, not euros. */
+const CONVERSION = 0.07;
+/** What an hour of the human work being replaced would have cost. */
+const HUMAN_RATE = 22;
+
 /** Deterministic on first render (no RNG) so server and client markup agree. */
 export function createAgents(): AgentState[] {
   const out: AgentState[] = [];
@@ -37,10 +44,10 @@ export function createAgents(): AgentState[] {
         bob: 0,
         runs: def.baseRuns,
         hours: def.baseHours,
-        tasksToday: Math.round(def.baseHours * (3600 / def.cadence) * 0.06),
+        tasksToday: Math.round(def.baseHours * (3600 / (def.cadence * CADENCE)) * 0.06),
         tokens: def.baseRuns * 1840,
-        saved: def.baseRuns * def.savedPerRun * 0.02,
-        value: def.baseRuns * def.valuePerRun * 0.011,
+        saved: def.savedPerRun * 1.2,
+        value: def.valuePerRun * 0.22,
         task: def.tasks[i % def.tasks.length],
         progress: ((i * 17) % 90) / 100,
         nextRun: 1 + (i % 7) * 0.8,
@@ -71,20 +78,20 @@ export function createMetrics(agents: AgentState[]): Metrics {
   }
   return {
     revenueToday: agents.reduce((s, a) => s + a.value, 0),
-    pipeline: 486_200,
-    dealsToday: 11,
+    pipeline: 34_600,
+    dealsToday: 4,
     runsToday: agents.reduce((s, a) => s + a.tasksToday, 0),
     runsAllTime,
     hoursSavedToday: agents.reduce((s, a) => s + a.saved, 0),
-    hoursSavedAllTime: 12_486,
+    hoursSavedAllTime: 5_240,
     efficiency: 94.2,
     successRate: 98.7,
-    agentCostToday: 1_284,
-    humanCostToday: 9_760,
-    ticketsResolved: 318,
-    invoicesCleared: 246,
-    shipmentsRouted: 1_240,
-    leadsQualified: 187,
+    agentCostToday: 11,
+    humanCostToday: 182,
+    ticketsResolved: 44,
+    invoicesCleared: 38,
+    shipmentsRouted: 96,
+    leadsQualified: 26,
     throughput: Array.from({ length: 64 }, (_, i) => 1.6 + Math.sin(i / 5) * 0.5 + (i % 3) * 0.12),
     byDept,
   };
@@ -96,6 +103,41 @@ const VERBS: Record<DeptId, string[]> = {
   contabilidad: ["asiento conciliado", "factura emitida", "desvío detectado", "impuesto revisado"],
   logistica: ["ruta recalculada", "stock repuesto", "envío rastreado", "devolución resuelta"],
 };
+
+/** Most runs move work forward rather than money, so each area reports in its own unit. */
+const OUTPUTS: Record<DeptId, { unit: string; min: number; max: number }[]> = {
+  marketing: [
+    { unit: "piezas", min: 2, max: 9 },
+    { unit: "visitas", min: 40, max: 320 },
+    { unit: "anuncios", min: 1, max: 5 },
+    { unit: "keywords", min: 4, max: 26 },
+  ],
+  ventas: [
+    { unit: "leads", min: 1, max: 7 },
+    { unit: "reuniones", min: 1, max: 2 },
+    { unit: "propuestas", min: 1, max: 3 },
+    { unit: "correos", min: 3, max: 18 },
+  ],
+  contabilidad: [
+    { unit: "asientos", min: 4, max: 40 },
+    { unit: "facturas", min: 1, max: 12 },
+    { unit: "recibos", min: 2, max: 16 },
+    { unit: "cuadres", min: 1, max: 4 },
+  ],
+  logistica: [
+    { unit: "envíos", min: 3, max: 34 },
+    { unit: "rutas", min: 1, max: 4 },
+    { unit: "SKU", min: 2, max: 22 },
+    { unit: "avisos", min: 1, max: 9 },
+  ],
+};
+
+function workOutput(dept: DeptId) {
+  const pool = OUTPUTS[dept];
+  const o = pool[Math.floor(Math.random() * pool.length)] ?? pool[0];
+  const n = o.min + Math.floor(Math.random() * (o.max - o.min + 1));
+  return `${n} ${o.unit}`;
+}
 
 export class Simulation {
   agents = createAgents();
@@ -113,20 +155,22 @@ export class Simulation {
     // Seed the feed so the first frame already looks alive.
     for (let i = 0; i < 8; i++) {
       const a = this.agents[(i * 3 + 1) % this.agents.length];
-      this.pushLog(a, -i * 3);
+      this.pushLog(a, -i * 3, i === 2 ? a.def.valuePerRun * 0.08 : 0);
     }
   }
 
-  private pushLog(a: AgentState, at: number) {
+  private pushLog(a: AgentState, at: number, revenue: number) {
     const verbs = VERBS[a.def.dept];
     const verb = verbs[Math.floor(Math.random() * verbs.length)] ?? verbs[0];
+    const money = revenue >= 1;
     this.log.unshift({
       id: this.logId++,
       at,
       dept: a.def.dept,
       agent: a.def.name,
       text: `${verb} · ${a.task}`,
-      value: Math.round(a.def.valuePerRun * (0.6 + Math.random() * 0.9)),
+      result: money ? `+${Math.round(revenue)} €` : workOutput(a.def.dept),
+      isMoney: money,
     });
     if (this.log.length > 48) this.log.length = 48;
   }
@@ -139,10 +183,12 @@ export class Simulation {
     a.flash = 1;
     a.progress = 0;
     a.task = def.tasks[Math.floor(Math.random() * def.tasks.length)];
-    a.nextRun = def.cadence * (0.65 + Math.random() * 0.8);
+    a.nextRun = def.cadence * CADENCE * (0.65 + Math.random() * 0.8);
 
-    const value = def.valuePerRun * (0.55 + Math.random() * 0.95);
-    const saved = def.savedPerRun * (0.7 + Math.random() * 0.7);
+    // Only a minority of runs close money; the rest still save human hours.
+    const converts = Math.random() < CONVERSION;
+    const value = converts ? def.valuePerRun * 0.08 * (0.5 + Math.random() * 1.3) : 0;
+    const saved = def.savedPerRun * 0.035 * (0.7 + Math.random() * 0.7);
     a.value += value;
     a.saved += saved;
 
@@ -155,7 +201,7 @@ export class Simulation {
       saved,
       label: def.name,
     });
-    this.pushLog(a, this.time);
+    this.pushLog(a, this.time, value);
     this.runStamps.push(this.time);
 
     // Stepping away from the desk after a run keeps the floor in motion.
@@ -179,7 +225,7 @@ export class Simulation {
 
       a.nextRun -= dt;
       if (a.nextRun <= 0) this.fireRun(a);
-      a.progress = Math.min(0.99, 1 - Math.max(0, a.nextRun) / (def.cadence * 1.1));
+      a.progress = Math.min(0.99, 1 - Math.max(0, a.nextRun) / (def.cadence * CADENCE * 1.1));
 
       if (a.mode === "walk") {
         const dx = a.targetX - a.x;
@@ -253,13 +299,13 @@ export class Simulation {
     m.byDept[p.dept].runs += 1;
     m.byDept[p.dept].value += p.value;
     m.byDept[p.dept].saved += p.saved;
-    m.agentCostToday += 0.04 + Math.random() * 0.08;
+    m.agentCostToday += 0.004 + Math.random() * 0.009;
 
     switch (p.dept) {
       case "ventas":
         m.leadsQualified += Math.random() < 0.35 ? 1 : 0;
-        m.pipeline += p.value * 3.4;
-        if (Math.random() < 0.035) m.dealsToday += 1;
+        m.pipeline += p.value * 6.5;
+        if (p.value > 0 && Math.random() < 0.22) m.dealsToday += 1;
         break;
       case "contabilidad":
         m.invoicesCleared += Math.random() < 0.5 ? 1 : 0;
@@ -271,7 +317,7 @@ export class Simulation {
         m.ticketsResolved += Math.random() < 0.2 ? 1 : 0;
         break;
     }
-    m.humanCostToday += p.saved * 38;
+    m.humanCostToday += p.saved * HUMAN_RATE;
   }
 
   snapshot(): Snapshot {

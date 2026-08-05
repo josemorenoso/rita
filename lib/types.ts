@@ -100,7 +100,9 @@ export interface LogLine {
   dept: DeptId;
   agent: string;
   text: string;
-  value: number;
+  /** What the run produced: "+18 €", "6 leads", "24 asientos"… */
+  result: string;
+  isMoney: boolean;
 }
 
 export interface Metrics {
