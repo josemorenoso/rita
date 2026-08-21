@@ -12,3 +12,6 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Busquedas de clientes guardadas en local (datos de contacto reales).
+data/

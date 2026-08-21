@@ -1,6 +1,7 @@
 "use client";
 
 import { DEPTS } from "@/lib/world";
+import { AGENT_COUNT } from "@/lib/roster";
 import { dec, eur, eurCompact, num, pct } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
@@ -23,7 +24,7 @@ export default function NexusPanel({ snap, onClose }: { snap: Snapshot; onClose:
         <span className="panel-dept">CENTRO DE CONTROL</span>
         <h2>NEXUS</h2>
         <p className="panel-role">
-          Orquesta 25 agentes en cuatro áreas. Cada paquete de luz que llega por el bus es una ejecución
+          Orquesta {AGENT_COUNT} agentes en cuatro áreas. Cada paquete de luz que llega por el bus es una ejecución
           contabilizada aquí.
         </p>
       </header>
@@ -44,7 +45,7 @@ export default function NexusPanel({ snap, onClose }: { snap: Snapshot; onClose:
         <Kpi label="Horas totales ahorradas" value={`${dec(m.hoursSavedToday)} h`} hint="hoy" tone="cyan" />
         <Kpi label="Eficiencia del equipo" value={pct(m.efficiency)} hint="media móvil 60 s" tone="green" />
         <Kpi label="Ejecuciones totales" value={num(m.runsAllTime)} hint={`${num(m.runsToday)} hoy`} tone="cyan" />
-        <Kpi label="Agentes activos" value={`${working}/25`} hint={`${snap.runsPerMin} ejec./min`} tone="green" />
+        <Kpi label="Agentes activos" value={`${working}/${AGENT_COUNT}`} hint={`${snap.runsPerMin} ejec./min`} tone="green" />
       </section>
 
       <section className="panel-block">
@@ -88,7 +89,7 @@ export default function NexusPanel({ snap, onClose }: { snap: Snapshot; onClose:
             <strong>{eur(m.humanCostToday)}</strong>
           </div>
           <div className="compare-row">
-            <span>25 agentes</span>
+            <span>{AGENT_COUNT} agentes</span>
             <div className="compare-track">
               <div
                 className="compare-fill agents"

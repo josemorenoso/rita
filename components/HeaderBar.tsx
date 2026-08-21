@@ -1,6 +1,7 @@
 "use client";
 
 import { clockLabel, eur, num, uptimeLabel } from "@/lib/format";
+import { AGENT_COUNT } from "@/lib/roster";
 import type { Snapshot } from "@/lib/types";
 
 export default function HeaderBar({
@@ -23,7 +24,7 @@ export default function HeaderBar({
       <div className="topbar-stats">
         <Readout label="Hora local" value={snap ? clockLabel(snap.clock) : "09:14:00"} />
         <Readout label="Sesión" value={snap ? uptimeLabel(snap.uptime) : "00:00"} />
-        <Readout label="Agentes" value="25 / 25" live />
+        <Readout label="Agentes" value={`${AGENT_COUNT} / ${AGENT_COUNT}`} live />
         <Readout label="Ejec./min" value={snap ? num(snap.runsPerMin) : "0"} live />
         <Readout label="Ingresos hoy" value={m ? eur(m.revenueToday) : "—"} accent />
       </div>

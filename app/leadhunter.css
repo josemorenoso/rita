@@ -1,0 +1,569 @@
+/* ─────────────────────────  CAZA DE CLIENTES  ─────────────────────────
+   El único flujo de la simulación que golpea APIs reales. Usa el rosa de
+   Marketing para que se lea como parte de esa sala, no como otra aplicación.
+   Los tokens (--panel, --line, --ink…) vienen de globals.css.
+   --------------------------------------------------------------------- */
+
+.panel-hunt {
+  --mkt: #ff5fa2;
+  border: 1px solid rgba(255, 95, 162, 0.4);
+  background: linear-gradient(180deg, rgba(255, 95, 162, 0.14), rgba(255, 95, 162, 0.03));
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.panel-hunt p {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+.hunt-cta {
+  width: 100%;
+  padding: 11px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 9px;
+  line-height: 1.6;
+  letter-spacing: 0.06em;
+  color: #1a0311;
+  background: var(--mkt, #ff5fa2);
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
+}
+
+.hunt-cta:hover {
+  filter: brightness(1.12);
+}
+
+.hunt-cta:active {
+  transform: translateY(1px);
+}
+
+/* ── El modal ── */
+
+.hunter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 5, 16, 0.82);
+  backdrop-filter: blur(3px);
+  animation: hunter-in 0.16s ease-out;
+}
+
+@keyframes hunter-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.hunter {
+  --mkt: #ff5fa2;
+  width: min(620px, 100%);
+  max-height: min(88vh, 780px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid rgba(255, 95, 162, 0.34);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+
+.hunter-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hunter-head h2 {
+  margin: 5px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mkt);
+}
+
+.hunter-head .panel-close {
+  position: static;
+}
+
+.hunter-body {
+  padding: 16px 18px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hunter-field {
+  display: block;
+}
+
+.hunter-field .panel-label {
+  margin-bottom: 6px;
+}
+
+.hunter-field input:not([type="range"]) {
+  width: 100%;
+  padding: 10px 11px;
+  font: inherit;
+  color: var(--ink);
+  background: #070c22;
+  border: 1px solid var(--line);
+}
+
+.hunter-field input:not([type="range"]):focus {
+  border-color: var(--mkt);
+  outline: none;
+}
+
+.hunter-field input::placeholder {
+  color: var(--dim);
+}
+
+.hunter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: -6px;
+}
+
+.hunter-chip {
+  font-size: 10px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  background: #0a1029;
+  color: var(--ink-2);
+  transition: all 0.12s ease;
+}
+
+.hunter-chip:hover {
+  border-color: var(--mkt);
+  color: var(--ink);
+}
+
+.hunter-chip.on {
+  background: var(--mkt);
+  border-color: var(--mkt);
+  color: #1a0311;
+}
+
+.hunter-sliders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.hunter-sliders .panel-label strong {
+  color: var(--mkt);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.hunter-sliders input[type="range"] {
+  width: 100%;
+  accent-color: var(--mkt);
+}
+
+.hunter-quota {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  background: #070c22;
+  border-left: 2px solid var(--mkt);
+}
+
+.hunter-launch {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  text-align: center;
+  text-decoration: none;
+  font-family: var(--font-pixel), monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #1a0311;
+  background: var(--mkt);
+  transition: filter 0.15s ease;
+}
+
+.hunter-launch:hover {
+  filter: brightness(1.12);
+}
+
+.hunter-launch:disabled {
+  background: var(--line);
+  color: var(--dim);
+  cursor: not-allowed;
+}
+
+.hunter-note {
+  margin: 0;
+  font-size: 10px;
+  color: var(--dim);
+  line-height: 1.5;
+}
+
+/* ── La consola en vivo ── */
+
+.hunter-counters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.hunter-counters div {
+  padding: 9px 11px;
+  background: #070c22;
+  border: 1px solid var(--line);
+}
+
+.hunter-counters strong {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hunter-counters .accent {
+  color: var(--mkt);
+}
+
+.hunter-console {
+  min-height: 240px;
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: 11px;
+  background: #04081c;
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.hline {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: baseline;
+  margin: 0 0 5px;
+  animation: hline-in 0.2s ease-out;
+}
+
+@keyframes hline-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+.hline-mark {
+  font-weight: 600;
+}
+
+.hline-text {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.hline-detail {
+  color: var(--dim);
+  font-size: 10px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.hline-run .hline-mark {
+  color: var(--bus);
+  animation: hline-pulse 1s ease-in-out infinite;
+}
+
+@keyframes hline-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.hline-ok .hline-mark,
+.hline-ok .hline-detail {
+  color: var(--green);
+}
+
+.hline-warn .hline-mark,
+.hline-warn .hline-detail {
+  color: var(--amber);
+}
+
+.hline-err .hline-mark,
+.hline-err .hline-detail {
+  color: #ff6b6b;
+}
+
+.hunter-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+}
+
+.hunter-secondary {
+  padding: 13px;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  background: #0a1029;
+}
+
+.hunter-secondary:hover {
+  border-color: var(--mkt);
+  color: var(--ink);
+}
+
+/* ─────────────────────────  PÁGINAS /leads  ─────────────────────────── */
+
+.leads-shell {
+  --mkt: #ff5fa2;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 26px clamp(16px, 4vw, 46px) 60px;
+}
+
+.leads-shell .accent {
+  color: var(--mkt);
+}
+
+.leads-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.leads-top h1 {
+  margin: 7px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--mkt);
+}
+
+.leads-back {
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 11px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.leads-back:hover {
+  border-color: var(--mkt);
+  color: var(--ink);
+}
+
+.leads-empty {
+  margin-top: 60px;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.leads-empty-hint {
+  color: var(--dim);
+  font-size: 11px;
+  max-width: 44ch;
+  margin: 8px auto 0;
+  line-height: 1.6;
+}
+
+.run-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.run-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.run-card:hover {
+  border-color: var(--mkt);
+  transform: translateX(3px);
+}
+
+.run-main strong {
+  display: block;
+  color: var(--ink);
+}
+
+.run-city {
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
+.run-stats {
+  display: flex;
+  gap: 18px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  flex-wrap: wrap;
+}
+
+.run-stats b {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.run-stats .accent b {
+  color: var(--mkt);
+}
+
+.run-when {
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.leads-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.leads-summary div {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.leads-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.leads-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.leads-table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 500;
+  padding: 11px 13px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.leads-table td {
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  vertical-align: top;
+}
+
+.leads-table tr:hover td {
+  background: rgba(255, 95, 162, 0.05);
+}
+
+.leads-table a {
+  color: var(--bus);
+  text-decoration: none;
+}
+
+.leads-table a:hover {
+  text-decoration: underline;
+}
+
+.leads-table a.accent {
+  color: var(--mkt);
+}
+
+.col-num {
+  color: var(--dim);
+  text-align: right;
+  width: 1%;
+}
+
+.col-name {
+  color: var(--ink);
+  font-weight: 500;
+  white-space: normal;
+  min-width: 190px;
+}
+
+.col-addr {
+  white-space: normal;
+  min-width: 190px;
+  font-size: 10.5px;
+}
+
+.col-role {
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.col-none {
+  color: #38406e;
+}
+
+@media (max-width: 620px) {
+  .hunter-sliders,
+  .hunter-actions,
+  .run-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hunter-backdrop,
+  .hline {
+    animation: none;
+  }
+
+  .hline-run .hline-mark {
+    animation: none;
+  }
+
+  .run-card:hover {
+    transform: none;
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import AgentAvatar from "./AgentAvatar";
 import { DEPT_BY_ID } from "@/lib/world";
 import { dec, eur, hoursLabel, num, pct, tokensLabel } from "@/lib/format";
@@ -12,7 +13,16 @@ const MODE_LABEL: Record<AgentState["mode"], string> = {
   sync: "Sincronizando",
 };
 
-export default function AgentPanel({ agent, onClose }: { agent: AgentState; onClose: () => void }) {
+export default function AgentPanel({
+  agent,
+  onClose,
+  huntHref,
+}: {
+  agent: AgentState;
+  onClose: () => void;
+  /** Solo lo recibe el agente que sabe buscar clientes de verdad. */
+  huntHref?: string;
+}) {
   const d = agent.def;
   const dept = DEPT_BY_ID[d.dept];
   const accent = dept.accent;
@@ -42,6 +52,15 @@ export default function AgentPanel({ agent, onClose }: { agent: AgentState; onCl
           </div>
         </div>
       </header>
+
+      {huntHref && (
+        <section className="panel-hunt">
+          <Link className="hunt-cta" href={huntHref}>
+            ▶ Lanzar búsqueda de clientes
+          </Link>
+          <p>Busca negocios reales en el mapa, saca sus teléfonos y te los descarga en Excel.</p>
+        </section>
+      )}
 
       <section className="panel-task">
         <span className="panel-label">Tarea en curso</span>

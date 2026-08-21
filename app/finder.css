@@ -1,0 +1,203 @@
+/* ─────────────────────  LA HERRAMIENTA EN UNA PANTALLA  ─────────────────────
+   La portada del regalo: formulario, consola y tabla en una sola columna.
+   Los tokens (--panel, --line, --ink…) vienen de globals.css.
+   -------------------------------------------------------------------------- */
+
+.finder {
+  --mkt: #ff5fa2;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 26px clamp(14px, 4vw, 44px) 70px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.finder .accent {
+  color: var(--mkt);
+}
+
+.finder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.finder-head h1 {
+  margin: 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: clamp(16px, 3.4vw, 22px);
+  line-height: 1.5;
+  color: var(--mkt);
+}
+
+.finder-tagline {
+  margin: 10px 0 0;
+  max-width: 52ch;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.finder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 22px 0;
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.finder-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  align-items: end;
+}
+
+/* ── El desplegable de la clave, cerrado por defecto ── */
+
+.finder-optional {
+  border: 1px solid var(--line);
+  background: #070c22;
+}
+
+.finder-optional > summary {
+  padding: 10px 13px;
+  cursor: pointer;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.finder-optional > summary::-webkit-details-marker {
+  display: none;
+}
+
+.finder-optional > summary::before {
+  content: "▸";
+  color: var(--mkt);
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.finder-optional[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.finder-optional-tag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  padding: 2px 6px;
+}
+
+.finder-optional-body {
+  padding: 0 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.finder-optional-body a {
+  color: var(--mkt);
+}
+
+/* ── Resultados ── */
+
+.finder-results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.finder-results .hunter-counters {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.finder-results .hunter-console {
+  min-height: 0;
+  max-height: 30vh;
+}
+
+.finder-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  margin: 4px 0;
+}
+
+.finder-actions .hunter-launch {
+  font-size: 11px;
+}
+
+.finder-foot {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 34px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.finder-foot a {
+  color: var(--mkt);
+  text-decoration: none;
+}
+
+.finder-foot a:hover {
+  text-decoration: underline;
+}
+
+/* ── El formulario de descarga ── */
+
+.hunter.gate {
+  width: min(440px, 100%);
+}
+
+.gate-intro {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.gate-intro strong {
+  color: var(--mkt);
+}
+
+.gate-error {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #ff9b9b;
+  background: rgba(255, 107, 107, 0.1);
+  border-left: 2px solid #ff6b6b;
+}
+
+.leads-clear {
+  margin-top: 22px;
+  width: auto;
+  align-self: flex-start;
+}
+
+@media (max-width: 720px) {
+  .finder-row,
+  .finder-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .finder-results .hunter-counters {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

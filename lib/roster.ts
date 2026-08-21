@@ -225,6 +225,37 @@ export const ROSTER: AgentDef[] = [
     ],
   },
 
+  {
+    id: "mkt-08",
+    name: "Rita Quiroga",
+    role: "Cazadora de Clientes",
+    dept: "marketing",
+    bio: "Barre el mapa de una ciudad buscando los negocios que encajan con lo que vendes, se queda con los que tienen teléfono o web, y les saca el correo del responsable. Entrega la lista lista para llamar, no un informe.",
+    model: "opus-5",
+    tools: ["Google Maps", "OpenStreetMap", "Hunter.io", "HubSpot"],
+    tasks: [
+      "Barriendo el mapa en busca de negocios que encajan",
+      "Descartando los que no tienen forma de contacto",
+      "Verificando el correo del responsable con Hunter.io",
+      "Ordenando la lista por facilidad de contacto",
+      "Preparando la lista para la ronda de llamadas",
+    ],
+    palette: P(HAIR[6], SKIN[2], "#F5F7FF", "#FF2E93", "#1A1E36", "#FF2E93"),
+    deployedDays: 2,
+    baseRuns: 148,
+    baseHours: 4.2,
+    cadence: 11,
+    successRate: 97.2,
+    avgRuntime: 34,
+    valuePerRun: 130,
+    savedPerRun: 0.55,
+    skills: [
+      { label: "Prospección", value: 92 },
+      { label: "Verificación", value: 88 },
+      { label: "Cartografía", value: 95 },
+    ],
+  },
+
   // ──────────────────────────────  VENTAS  ──────────────────────────────
   {
     id: "sls-01",
@@ -771,6 +802,12 @@ export const ROSTER: AgentDef[] = [
     ],
   },
 ];
+
+/** Se deriva del roster para que los contadores de la interfaz nunca se desfasen. */
+export const AGENT_COUNT = ROSTER.length;
+
+/** El único agente que ejecuta trabajo real contra APIs externas, no simulado. */
+export const LEAD_HUNTER_ID = "mkt-08";
 
 export const AGENTS_BY_DEPT = {
   marketing: ROSTER.filter((a) => a.dept === "marketing"),
