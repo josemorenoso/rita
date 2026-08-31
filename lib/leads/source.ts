@@ -83,6 +83,10 @@ export interface SearchResult {
   leads: Lead[];
   /** Cuántos negocios devolvió el mapa antes de filtrar los que no sirven. */
   rawCount: number;
+  /** Radio con el que se completó la búsqueda (puede ser mayor al pedido). */
+  radiusKm: number;
+  /** true si hubo que ampliar el radio pedido para completar la lista. */
+  expanded: boolean;
 }
 
 /** Resuelve "Medellín" o "Bogotá, Colombia" a coordenadas. */
@@ -221,6 +225,20 @@ export function toDomain(website: string | null): string | null {
   }
 }
 
+/**
+ * Normaliza un tag de red social a URL abrible. En OSM llega de tres formas
+ * distintas según quién lo cargó: URL completa, dominio sin protocolo, o solo
+ * el usuario.
+ */
+function socialUrl(handle: string | null, host: string): string | null {
+  if (!handle) return null;
+  const trimmed = handle.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.toLowerCase().includes(host)) return `https://${trimmed.replace(/^\/+/, "")}`;
+  return `https://${host}/${trimmed.replace(/^@/, "").replace(/^\/+/, "")}`;
+}
+
 function buildAddress(tags: Record<string, string>): string | null {
   const street = tags["addr:street"];
   const number = tags["addr:housenumber"];
@@ -251,6 +269,8 @@ function toLead(el: OverpassElement, categoryLabel: string): Lead | null {
     lat,
     lon,
     mapEmail: firstTag(tags, ["email", "contact:email"]),
+    instagram: socialUrl(firstTag(tags, ["contact:instagram", "instagram"]), "instagram.com"),
+    linkedin: socialUrl(firstTag(tags, ["contact:linkedin", "linkedin"]), "linkedin.com"),
     email: null,
     contactName: null,
     contactPosition: null,
@@ -264,8 +284,28 @@ function toLead(el: OverpassElement, categoryLabel: string): Lead | null {
  * porque son los que rinden en una sesión de prospección.
  */
 function score(lead: Lead): number {
-  return (lead.domain ? 2 : 0) + (lead.phone ? 1 : 0) + (lead.mapEmail ? 1 : 0);
+  return (
+    (lead.domain ? 2 : 0) +
+    (lead.phone ? 1 : 0) +
+    (lead.mapEmail ? 1 : 0) +
+    (lead.instagram ? 1 : 0) +
+    (lead.linkedin ? 1 : 0)
+  );
 }
+
+/** Una ficha cuenta como "completa" cuando de verdad sirve para llamar y escribir. */
+function isComplete(lead: Lead): boolean {
+  return Boolean(lead.phone) && Boolean(lead.domain || lead.mapEmail || lead.instagram);
+}
+
+/**
+ * Multiplicadores de radio para completar la lista cuando el primer barrido se
+ * queda corto de fichas completas (teléfono + alguna forma de contactar).
+ * Se para en el primero que ya alcanza el objetivo, así que en la mayoría de
+ * ciudades ni se llega a intentar el segundo.
+ */
+const RADIUS_STEPS = [1, 2, 3];
+const MAX_RADIUS_KM = 60;
 
 export async function searchBusinesses(opts: {
   query: string;
@@ -277,22 +317,39 @@ export async function searchBusinesses(opts: {
   const categoryLabel = category?.label ?? opts.query.trim();
   const place = await geocode(opts.city);
 
-  const overpassQuery = buildQuery(category, opts.query, place.lat, place.lon, Math.round(opts.radiusKm * 1000));
-  const elements = await runOverpass(overpassQuery);
+  // Cuántas fichas completas queremos asegurar antes de conformarnos: el
+  // pedido del visitante, pero sin pasarse de 10 (ampliar el radio de una
+  // búsqueda de 100 tardaría demasiado para lo que rinde).
+  const target = Math.min(opts.limit, 10);
 
   const seen = new Set<string>();
   const leads: Lead[] = [];
+  let rawCount = 0;
+  let usedRadiusKm = opts.radiusKm;
+  let expanded = false;
 
-  for (const el of elements) {
-    const lead = toLead(el, categoryLabel);
-    if (!lead) continue;
+  for (const step of RADIUS_STEPS) {
+    const radiusKm = Math.min(MAX_RADIUS_KM, Math.round(opts.radiusKm * step));
+    const overpassQuery = buildQuery(category, opts.query, place.lat, place.lon, Math.round(radiusKm * 1000));
+    const elements = await runOverpass(overpassQuery);
+    rawCount = Math.max(rawCount, elements.length);
+    usedRadiusKm = radiusKm;
+    expanded = step > 1;
 
-    // Las cadenas repiten nombre en cada sucursal: nos quedamos con una por dominio.
-    const key = lead.domain ? `d:${lead.domain}` : `n:${normalize(lead.name)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    for (const el of elements) {
+      const lead = toLead(el, categoryLabel);
+      if (!lead) continue;
 
-    leads.push(lead);
+      // Las cadenas repiten nombre en cada sucursal: nos quedamos con una por dominio.
+      const key = lead.domain ? `d:${lead.domain}` : `n:${normalize(lead.name)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      leads.push(lead);
+    }
+
+    const completeCount = leads.filter(isComplete).length;
+    if (completeCount >= target || radiusKm >= MAX_RADIUS_KM) break;
   }
 
   leads.sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name, "es"));
@@ -302,7 +359,9 @@ export async function searchBusinesses(opts: {
     categoryLabel,
     place,
     leads: leads.slice(0, opts.limit),
-    rawCount: elements.length,
+    rawCount,
+    radiusKm: usedRadiusKm,
+    expanded,
   };
 }
 

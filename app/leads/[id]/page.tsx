@@ -92,7 +92,7 @@ export default function LeadsRunPage({ params }: { params: Promise<{ id: string 
         </button>
       </div>
 
-      <LeadTable leads={run.leads} />
+      <LeadTable leads={run.leads} city={run.city} />
 
       {gateOpen ? (
         <DownloadGate

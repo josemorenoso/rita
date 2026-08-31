@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import LeadTable from "./LeadTable";
 import DownloadGate from "./DownloadGate";
+import AgentDiagram from "./AgentDiagram";
 import { CHIP_CATEGORIES } from "@/lib/leads/categories";
 import { BRAND, SEARCH_DEFAULTS } from "@/lib/leads/brand";
 import { downloadCsv } from "@/lib/leads/csv";
@@ -129,8 +130,8 @@ export default function LeadFinder() {
     lineId.current = 0;
 
     // ── Paso 1: el mapa. Gratis, ilimitado y sin ninguna clave. ──
-    const searchLine = push(`Barriendo el mapa · ${query} · ${city}`);
-    let data: { run: LeadRun; matchedCategory: boolean };
+    const searchLine = push(`Mapa de negocios · ${query} · ${city}`);
+    let data: { run: LeadRun; matchedCategory: boolean; expanded: boolean };
 
     try {
       const res = await fetch("/api/leads/search", {
@@ -164,12 +165,37 @@ export default function LeadFinder() {
 
     push(`Zona · ${current.place}`, "ok", `radio ${current.radiusKm} km`);
 
+    if (data.expanded) {
+      push("Radio insuficiente · amplío la búsqueda", "ok", `hasta ${current.radiusKm} km para completar la lista`);
+    }
+
     if (!data.matchedCategory) {
       push(`"${query}" no es una categoría del mapa: busqué por nombre`, "warn", "usa un botón para más resultados");
     }
 
     const callable = current.leads.filter((l) => l.phone).length;
     push("Filtrando por forma de contacto", "ok", `${callable} con teléfono`);
+
+    const withInstagram = current.leads.filter((l) => l.instagram).length;
+    const withLinkedin = current.leads.filter((l) => l.linkedin).length;
+    push(
+      "Redes sociales · Instagram y LinkedIn",
+      "ok",
+      withInstagram || withLinkedin
+        ? `${withInstagram} con Instagram · ${withLinkedin} con LinkedIn publicados`
+        : "ninguno publicó su red todavía",
+    );
+
+    const priorRuns = store.listRuns();
+    const priorIds = new Set(priorRuns.flatMap((r) => r.leads.map((l) => l.id)));
+    const repeated = current.leads.filter((l) => priorIds.has(l.id)).length;
+    push(
+      "Base de datos · historial de búsquedas",
+      "ok",
+      priorRuns.length
+        ? `${repeated} ya estaban en tu base, ${current.leads.length - repeated} nuevos`
+        : "primera búsqueda guardada en tu base",
+    );
 
     const haveEmail = new Set(current.leads.filter((l) => l.mapEmail).map((l) => l.id));
     if (haveEmail.size) push("Correos publicados en el propio mapa", "ok", `${haveEmail.size} gratis, sin cuota`);
@@ -261,6 +287,9 @@ export default function LeadFinder() {
 
     if (cancelled.current) return;
 
+    const complete = current.leads.filter((l) => l.phone && (l.website || l.mapEmail || l.email || l.instagram)).length;
+    push("Ficha completa", "ok", `${complete} de ${current.leads.length} listos para contactar ya mismo`);
+
     store.saveRun(current);
     push("Lista lista para llamar", "ok", `${current.leads.length} clientes · ${haveEmail.size} con correo`);
     setPhase("results");
@@ -275,6 +304,7 @@ export default function LeadFinder() {
 
   const canLaunch = query.trim().length > 0 && city.trim().length > 0 && phase !== "running";
   const withPhone = run?.leads.filter((l) => l.phone).length ?? 0;
+  const withSocial = run?.leads.filter((l) => l.instagram || l.linkedin).length ?? 0;
 
   return (
     <div className="finder">
@@ -287,6 +317,8 @@ export default function LeadFinder() {
           Mis búsquedas
         </Link>
       </header>
+
+      <AgentDiagram />
 
       <section className="finder-form">
         <label className="hunter-field">
@@ -409,6 +441,10 @@ export default function LeadFinder() {
               <strong className="accent">{emails}</strong>
             </div>
             <div>
+              <span className="panel-label">Con redes</span>
+              <strong>{withSocial}</strong>
+            </div>
+            <div>
               <span className="panel-label">{fatal ? "Estado" : "Tiempo"}</span>
               <strong>{fatal ? "Detenido" : `${elapsed} s`}</strong>
             </div>
@@ -434,7 +470,7 @@ export default function LeadFinder() {
                   Nueva búsqueda
                 </button>
               </div>
-              <LeadTable leads={run.leads} />
+              <LeadTable leads={run.leads} city={run.city} />
             </>
           ) : null}
         </section>

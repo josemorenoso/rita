@@ -1,0 +1,148 @@
+/* ───────────────────────────  DIAGRAMA DE RITA  ───────────────────────────
+   El paso a paso con logos que vive en la ficha del agente. Reutiliza los
+   tokens de globals.css y el modal de leadhunter.css (.hunter-backdrop/.hunter)
+   para no inventar un segundo lenguaje visual.
+   -------------------------------------------------------------------------- */
+
+.diagram {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 16px 16px 18px;
+  margin: 22px 0;
+}
+
+.diagram-head h2 {
+  margin: 6px 0 4px;
+  font-family: var(--font-pixel), monospace;
+  font-size: clamp(13px, 2.6vw, 16px);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.diagram-sub {
+  margin: 0 0 14px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.diagram-hint-ok {
+  color: var(--green);
+  font-weight: 500;
+}
+
+.diagram-hint-locked {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.diagram-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+  gap: 8px;
+}
+
+.diagram-node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px 11px;
+  text-align: center;
+  background: #0a1029;
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.diagram-node-active {
+  border-color: rgba(63, 227, 138, 0.35);
+}
+
+.diagram-node-locked {
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.diagram-node-locked:hover,
+.diagram-node-locked:focus-visible {
+  border-color: var(--amber);
+  transform: translateY(-2px);
+}
+
+.diagram-node-active {
+  cursor: default;
+}
+
+.diagram-step {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-pixel), monospace;
+  font-size: 8px;
+  background: var(--void);
+  border: 1px solid var(--line);
+  color: var(--dim);
+}
+
+.diagram-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+
+.diagram-label {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.diagram-sublabel {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.02em;
+}
+
+.diagram-badge {
+  margin-top: 3px;
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+}
+
+.diagram-badge-active {
+  color: var(--green);
+  border-color: rgba(63, 227, 138, 0.4);
+}
+
+.diagram-badge-locked {
+  color: var(--amber);
+  border-color: rgba(255, 194, 75, 0.4);
+}
+
+.diagram-modal-sub {
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diagram-node-locked:hover,
+  .diagram-node-locked:focus-visible {
+    transform: none;
+  }
+}

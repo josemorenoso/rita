@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       place: result.place.name,
       lat: result.place.lat,
       lon: result.place.lon,
-      radiusKm,
+      radiusKm: result.radiusKm,
       leads: result.leads,
     };
 
@@ -60,6 +60,8 @@ export async function POST(request: Request) {
       /** Distingue "categoría reconocida" de "búsqueda por nombre", que da menos resultados. */
       matchedCategory: result.category !== null,
       rawCount: result.rawCount,
+      /** true si tuvo que ampliar el radio pedido para completar la lista. */
+      expanded: result.expanded,
     });
   } catch (err) {
     if (err instanceof LeadSourceError) {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AgentAvatar from "./AgentAvatar";
+import AgentDiagram from "./AgentDiagram";
 import { DEPT_BY_ID } from "@/lib/world";
 import { dec, eur, hoursLabel, num, pct, tokensLabel } from "@/lib/format";
 import type { AgentState } from "@/lib/types";
@@ -61,6 +62,8 @@ export default function AgentPanel({
           <p>Busca negocios reales en el mapa, saca sus teléfonos y te los descarga en Excel.</p>
         </section>
       )}
+
+      {huntHref && <AgentDiagram title="Así funciona por dentro" />}
 
       <section className="panel-task">
         <span className="panel-label">Tarea en curso</span>

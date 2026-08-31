@@ -1,4 +1,5 @@
 import { BRAND } from "./brand";
+import { instagramSearchUrl, linkedinSearchUrl } from "./links";
 import type { LeadRun } from "./types";
 
 /**
@@ -18,6 +19,8 @@ const HEADERS = [
   "Contacto",
   "Cargo",
   "Fiabilidad correo",
+  "Instagram",
+  "LinkedIn",
   "Web",
   "Dirección",
   "Categoría",
@@ -49,6 +52,8 @@ export function leadsToCsv(run: LeadRun): string {
         lead.contactName,
         lead.contactPosition,
         lead.confidence !== null ? `${lead.confidence}%` : "",
+        lead.instagram ?? instagramSearchUrl(lead.name),
+        lead.linkedin ?? linkedinSearchUrl(lead.name, run.city),
         lead.website,
         lead.address,
         lead.category,

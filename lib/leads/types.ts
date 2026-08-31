@@ -16,6 +16,10 @@ export interface Lead {
   lon: number;
   /** Email publicado en el propio mapa, si lo hay. Sale gratis, sin gastar cuota. */
   mapEmail: string | null;
+  /** Perfil de Instagram publicado en el mapa, si lo hay. */
+  instagram: string | null;
+  /** Perfil de LinkedIn publicado en el mapa, si lo hay (muy poco frecuente). */
+  linkedin: string | null;
 
   // ── Enriquecimiento (Hunter.io) ──
   email: string | null;

@@ -1,9 +1,10 @@
 "use client";
 
 import type { Lead } from "@/lib/leads/types";
+import { instagramSearchUrl, linkedinSearchUrl } from "@/lib/leads/links";
 
 /** La tabla de clientes. Los teléfonos son enlaces `tel:` para llamar desde el móvil. */
-export default function LeadTable({ leads }: { leads: Lead[] }) {
+export default function LeadTable({ leads, city }: { leads: Lead[]; city: string }) {
   return (
     <div className="leads-table-wrap">
       <table className="leads-table">
@@ -14,6 +15,7 @@ export default function LeadTable({ leads }: { leads: Lead[] }) {
             <th>Teléfono</th>
             <th>Correo</th>
             <th>Contacto</th>
+            <th>Redes</th>
             <th>Web</th>
             <th>Dirección</th>
           </tr>
@@ -50,6 +52,27 @@ export default function LeadTable({ leads }: { leads: Lead[] }) {
                     </>
                   ) : (
                     <span className="col-none">—</span>
+                  )}
+                </td>
+                <td className="col-social">
+                  {lead.instagram ? (
+                    <a href={lead.instagram} target="_blank" rel="noreferrer">
+                      Instagram
+                    </a>
+                  ) : (
+                    <a href={instagramSearchUrl(lead.name)} target="_blank" rel="noreferrer" className="col-role">
+                      Buscar IG ↗
+                    </a>
+                  )}
+                  <br />
+                  {lead.linkedin ? (
+                    <a href={lead.linkedin} target="_blank" rel="noreferrer">
+                      LinkedIn
+                    </a>
+                  ) : (
+                    <a href={linkedinSearchUrl(lead.name, city)} target="_blank" rel="noreferrer" className="col-role">
+                      Buscar LI ↗
+                    </a>
                   )}
                 </td>
                 <td>

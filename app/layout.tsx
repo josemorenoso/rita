@@ -4,6 +4,7 @@ import { BRAND } from "@/lib/leads/brand";
 import "./globals.css";
 import "./leadhunter.css";
 import "./finder.css";
+import "./diagram.css";
 
 const pixel = Press_Start_2P({
   weight: "400",

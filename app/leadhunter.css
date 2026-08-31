@@ -541,6 +541,17 @@
   font-size: 10px;
 }
 
+.col-social {
+  white-space: normal;
+  min-width: 110px;
+  font-size: 10.5px;
+  line-height: 1.9;
+}
+
+.leads-table td.col-social a.col-role {
+  color: var(--dim);
+}
+
 .col-none {
   color: #38406e;
 }
