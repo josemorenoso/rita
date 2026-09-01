@@ -256,9 +256,11 @@ export default function RoutePlanner() {
           />
 
           <div className="rutas-consola">
-            <span className="panel-label">
-              <i className="dot" /> Razonamiento en directo
-            </span>
+            <div className="rutas-col-head">
+              <span className="panel-label">
+                <i className="dot" /> Razonamiento en directo
+              </span>
+            </div>
             <ul>
               {consola.map((e) => (
                 <li key={e.seq} className={`rutas-linea rutas-linea-${e.marca}`}>
