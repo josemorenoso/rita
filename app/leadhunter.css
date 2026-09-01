@@ -1,13 +1,19 @@
-/* ─────────────────────────  CAZA DE CLIENTES  ─────────────────────────
-   El único flujo de la simulación que golpea APIs reales. Usa el rosa de
-   Marketing para que se lea como parte de esa sala, no como otra aplicación.
+/* ────────────────────  PUERTAS A LAS HERRAMIENTAS  ────────────────────
+   Los flujos de la simulación que golpean el mundo real: la caza de
+   clientes de Rita y el reparto de Kai. Cada puerta se pinta con el color
+   de SU sala —rosa en Marketing, morado en Logística— para que se lea como
+   parte de esa sala y no como otra aplicación. El color entra por --accent,
+   que la ficha del agente ya inyecta con el acento de su departamento.
    Los tokens (--panel, --line, --ink…) vienen de globals.css.
    --------------------------------------------------------------------- */
 
 .panel-hunt {
-  --mkt: #ff5fa2;
-  border: 1px solid rgba(255, 95, 162, 0.4);
-  background: linear-gradient(180deg, rgba(255, 95, 162, 0.14), rgba(255, 95, 162, 0.03));
+  border: 1px solid color-mix(in srgb, var(--accent, #ff5fa2) 40%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent, #ff5fa2) 14%, transparent),
+    color-mix(in srgb, var(--accent, #ff5fa2) 3%, transparent)
+  );
   padding: 12px;
   margin-bottom: 14px;
 }
@@ -27,7 +33,7 @@
   line-height: 1.6;
   letter-spacing: 0.06em;
   color: #1a0311;
-  background: var(--mkt, #ff5fa2);
+  background: var(--accent, #ff5fa2);
   transition:
     filter 0.15s ease,
     transform 0.1s ease;

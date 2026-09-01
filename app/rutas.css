@@ -1,0 +1,809 @@
+/* ─────────────────────  PLANIFICADOR DE RUTAS  ─────────────────────
+   La mesa de despacho de Kai: los pedidos que entran a la izquierda, el
+   mapa de Medellín en el centro y los domiciliarios a la derecha.
+   Los tokens (--panel, --line, --ink…) vienen de globals.css; el morado
+   de Logística se inyecta como --accent desde el componente.
+   ------------------------------------------------------------------- */
+
+.rutas {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── La cabecera ── */
+
+.rutas-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #0a1029 0%, #070b1e 100%);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.rutas-marca h1 {
+  margin: 0;
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: clamp(13px, 2.2vw, 17px);
+  line-height: 1.5;
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.rutas-tagline {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.rutas-controles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.rutas-cta {
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 12px 18px;
+  color: #12061f;
+  background: var(--accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: filter 0.15s linear;
+}
+
+.rutas-cta:hover {
+  filter: brightness(1.12);
+}
+
+.rutas-secundario,
+.rutas-vel,
+.rutas-volver {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  background: var(--panel);
+  text-decoration: none;
+  transition:
+    border-color 0.15s linear,
+    color 0.15s linear;
+}
+
+.rutas-secundario:hover,
+.rutas-vel:hover,
+.rutas-volver:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.rutas-vel {
+  min-width: 34px;
+  text-align: center;
+}
+
+.rutas-vel.on {
+  color: var(--bus);
+  border-color: color-mix(in srgb, var(--bus) 45%, transparent);
+  background: var(--bus-soft);
+}
+
+/* ── Las tres columnas ── */
+
+.rutas-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr) 330px;
+}
+
+.rutas-col {
+  min-height: 0;
+  overflow-y: auto;
+  background: #070c22;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.rutas-col-pedidos {
+  border-right: 1px solid var(--line);
+}
+
+.rutas-col-flota {
+  border-left: 1px solid var(--line);
+}
+
+.rutas-col-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ── La lista de pedidos ── */
+
+.rutas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rutas-pedido {
+  position: relative;
+  padding: 9px 14px 9px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 2px solid transparent;
+  opacity: 0.55;
+  transition:
+    opacity 0.25s linear,
+    border-color 0.25s linear,
+    background 0.15s linear;
+}
+
+.rutas-pedido.puesto {
+  opacity: 1;
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 60%);
+}
+
+.rutas-pedido.sobre {
+  background: #0d1433;
+}
+
+.rutas-pedido-top {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.rutas-pedido-top strong {
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.rutas-pedido-cliente {
+  font-size: 11.5px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rutas-tag {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+
+.rutas-tag-express {
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+}
+
+.rutas-tag-programado {
+  color: var(--bus);
+  border-color: color-mix(in srgb, var(--bus) 40%, transparent);
+}
+
+.rutas-pedido-dir,
+.rutas-pedido-meta {
+  margin: 3px 0 0;
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+.rutas-pedido-meta {
+  color: var(--dim);
+}
+
+.rutas-pedido-veh {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 4px;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ── El mapa ── */
+
+.rutas-centro {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.rutas-mapa {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--void);
+}
+
+.rutas-teselas {
+  position: absolute;
+  inset: 0;
+  /* Esri viene en gris neutro; esto lo apaga y le quita saturación para que
+     las seis rutas de colores sean lo único brillante de la pantalla. */
+  filter: brightness(0.74) saturate(0.35) contrast(1.05);
+}
+
+.tesela {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Respaldo cuando Esri no responde: OpenStreetMap invertido. El filtro es
+   puramente del navegador, no modifica ni redistribuye la tesela. */
+.tesela-respaldo {
+  filter: invert(1) hue-rotate(180deg) brightness(0.78) contrast(1.1) saturate(0.55);
+}
+
+.tesela-etiquetas {
+  opacity: 0.75;
+}
+
+/* Tiñe el gris de Esri hacia el azul marino de la app conservando el detalle:
+   `color` toma el tono de esta capa y la luminosidad del mapa de debajo. */
+.rutas-velo {
+  position: absolute;
+  inset: 0;
+  background: #16234f;
+  mix-blend-mode: color;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.rutas-lienzo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rutas-leyenda {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 60%;
+}
+
+.rutas-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  background: rgba(7, 12, 34, 0.86);
+  color: var(--dim);
+}
+
+.rutas-chip i {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.rutas-chip.on {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.rutas-escala {
+  position: absolute;
+  left: 12px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9px;
+  color: var(--ink-2);
+  text-shadow: 0 0 6px #05081a;
+}
+
+.rutas-escala span {
+  height: 5px;
+  border: 1px solid var(--ink-2);
+  border-top: 0;
+}
+
+.rutas-credito {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  margin: 0;
+  font-size: 8.5px;
+  color: var(--dim);
+  background: rgba(5, 8, 26, 0.72);
+  padding: 3px 6px;
+  max-width: 70%;
+  text-align: right;
+}
+
+.rutas-credito a {
+  color: var(--ink-2);
+}
+
+/* ── La consola en directo ── */
+
+.rutas-consola {
+  flex: 0 0 auto;
+  height: 124px;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  background: #070c22;
+  padding: 9px 14px 0;
+}
+
+.rutas-consola ul {
+  list-style: none;
+  margin: 7px 0 0;
+  padding: 0;
+}
+
+.rutas-linea {
+  display: flex;
+  gap: 8px;
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  animation: rutasEntra 0.3s ease-out;
+}
+
+.rutas-marca-linea {
+  flex: 0 0 10px;
+  color: var(--dim);
+}
+
+.rutas-linea-ok .rutas-marca-linea {
+  color: var(--green);
+}
+
+.rutas-linea-warn {
+  color: var(--amber);
+}
+
+.rutas-linea-warn .rutas-marca-linea {
+  color: var(--amber);
+}
+
+.rutas-linea-err {
+  color: #ff7a8a;
+}
+
+.rutas-linea-err .rutas-marca-linea {
+  color: #ff7a8a;
+}
+
+@keyframes rutasEntra {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── La flota ── */
+
+.rutas-flota-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rutas-domi {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.15s linear;
+}
+
+.rutas-domi:hover {
+  background: #0d1433;
+}
+
+.rutas-domi-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rutas-domi-top i {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  box-shadow: 0 0 9px var(--accent);
+  flex: 0 0 auto;
+}
+
+.rutas-domi-top strong {
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rutas-domi-id {
+  margin-left: auto;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+}
+
+.rutas-domi-meta,
+.rutas-domi-pie {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-2);
+  margin-top: 5px;
+}
+
+.rutas-domi-pie {
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+.rutas-barra {
+  display: block;
+  height: 4px;
+  margin-top: 7px;
+  background: #101740;
+}
+
+.rutas-barra span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  transition: width 0.25s linear;
+}
+
+/* ── La ficha del domiciliario ── */
+
+.rutas-ficha {
+  padding: 0 0 24px;
+}
+
+.rutas-ficha-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.rutas-ficha-head h2 {
+  margin: 6px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--accent);
+}
+
+.rutas-ficha-head .panel-close {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.rutas-ficha-cifras {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.rutas-ficha-cifras > div {
+  background: var(--panel);
+  padding: 9px 10px;
+}
+
+.rutas-ficha-cifras strong {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.rutas-ficha-carga {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.rutas-gmaps {
+  display: block;
+  margin: 12px 14px;
+  padding: 12px;
+  text-align: center;
+  font-family: var(--font-pixel), monospace;
+  font-size: 9px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  color: #12061f;
+  background: var(--accent);
+  text-decoration: none;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.rutas-aviso {
+  margin: 12px 14px;
+  padding: 10px;
+  font-size: 10px;
+  color: var(--amber);
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
+}
+
+.rutas-paradas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rutas-parada {
+  display: flex;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.rutas-parada:hover {
+  background: #0d1433;
+}
+
+.rutas-parada-num {
+  flex: 0 0 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.rutas-parada strong {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.rutas-parada p {
+  margin: 3px 0 0;
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+.rutas-parada-meta {
+  color: var(--dim) !important;
+}
+
+.rutas-parada-bodega .rutas-parada-num {
+  color: var(--bus);
+  border-color: color-mix(in srgb, var(--bus) 45%, transparent);
+}
+
+.rutas-ficha-pie {
+  margin: 14px;
+  font-size: 9.5px;
+  color: var(--dim);
+}
+
+/* ── El panel de optimización ── */
+
+.rutas-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  background: #070b1e;
+  opacity: 0.45;
+  transition: opacity 0.4s linear;
+}
+
+.rutas-panel.abierto {
+  opacity: 1;
+}
+
+.rutas-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border-bottom: 1px solid var(--line);
+}
+
+.rutas-kpi {
+  background: var(--panel);
+  padding: 7px 13px;
+}
+
+.rutas-kpi strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-pixel), monospace;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.rutas-kpi-acento strong {
+  color: var(--accent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.rutas-kpi-pie {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.rutas-tabla-wrap {
+  min-width: 0;
+  max-height: 232px;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.rutas-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.rutas-tabla th {
+  text-align: left;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 5px 13px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.rutas-tabla td {
+  padding: 5px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.rutas-tabla tbody tr {
+  cursor: pointer;
+  transition: background 0.15s linear;
+}
+
+.rutas-tabla tbody tr:hover,
+.rutas-tabla tbody tr.on {
+  background: #0d1433;
+}
+
+.rutas-fila-kai td {
+  color: var(--ink);
+}
+
+.rutas-fila-kai td:first-child {
+  color: var(--accent);
+  border-left: 2px solid var(--accent);
+}
+
+.rutas-bien {
+  color: var(--green);
+}
+
+.rutas-mal {
+  color: var(--amber);
+}
+
+/* Las dos notas van en paralelo: en vertical se comerían el mapa. */
+.rutas-notas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 4px 22px;
+  padding: 8px 13px 0;
+}
+
+.rutas-nota,
+.rutas-supuestos {
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.rutas-supuestos {
+  color: var(--dim);
+}
+
+/* ── Pantallas estrechas ── */
+
+@media (max-width: 1180px) {
+  .rutas {
+    height: auto;
+    overflow: visible;
+  }
+
+  .rutas-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .rutas-col {
+    max-height: 340px;
+  }
+
+  .rutas-mapa {
+    height: 62vh;
+    flex: 0 0 auto;
+  }
+
+  .rutas-panel {
+    opacity: 1;
+  }
+
+  .rutas-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rutas-linea {
+    animation: none;
+  }
+
+  .rutas-pedido,
+  .rutas-panel,
+  .rutas-barra span,
+  .rutas-cta,
+  .rutas-domi,
+  .rutas-tabla tbody tr,
+  .rutas-secundario,
+  .rutas-vel,
+  .rutas-volver {
+    transition: none;
+  }
+}

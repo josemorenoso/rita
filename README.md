@@ -8,6 +8,7 @@ descargar en Excel y empezar a llamar.
 |---|---|
 | `/` | La herramienta. Es lo que compartes. |
 | `/leads` | Búsquedas anteriores de ese visitante (guardadas en su navegador). |
+| `/rutas` | El reparto del día: 40 pedidos, 6 domiciliarios y la ruta de cada uno sobre el mapa de Medellín. |
 | `/oficina` | La simulación AIOS de 26 agentes. Tu demo, no forma parte del regalo. |
 
 ---
@@ -24,6 +25,40 @@ a miles de personas sin pagar nada ni compartir tu cuota.
 
 **Las listas no se guardan en el servidor.** Viven en el `localStorage` del visitante.
 No almacenas datos de contacto de terceros y no hay nada que limpiar.
+
+---
+
+## El planificador de rutas (`/rutas`)
+
+Es la herramienta del agente **Kai Moreno** (`log-01`, Logística). Reparte 40
+pedidos entre 6 domiciliarios, ordena la ruta de cada uno y la dibuja sobre el
+callejero real de Medellín. Al entrar en un domiciliario sale su ruta completa y
+un botón que la abre en Google Maps con todas sus paradas.
+
+**Los datos están congelados y la página no hace ninguna llamada de red.** Los
+kilómetros son reales: salen de una matriz de distancias de OpenStreetMap (vía
+OSRM) que se pidió una sola vez y vive en `lib/rutas/matriz.json`. Así la ruta es
+idéntica en cada recarga —necesario para grabar en varias tomas— y no depende de
+que un servidor gratuito de terceros esté en pie.
+
+Para regenerar el día de reparto (otras direcciones, otros pedidos):
+
+```bash
+npm run rutas:congelar            # geocodifica de nuevo: tarda ~2 min
+npm run rutas:congelar -- --reusar  # reaprovecha direcciones y matriz
+```
+
+El script aborta si algún pedido queda sin asignar o aparece dos veces, así que
+un fallo del algoritmo no llega nunca a la pantalla.
+
+### De qué presume y frente a qué
+
+El panel compara el plan de Kai contra tres formas de repartir, todas con los
+**mismos 6 domiciliarios**. La comparación que vale es contra un despachador que
+ya agrupa por sectores y atiende los express primero, porque consigue la misma
+puntualidad: ahí el ahorro es de un 29 % en kilómetros. Frente a repartir por
+orden de llegada el ahorro sube al 54 %, pero ese plan llega tarde a 404 minutos
+de entregas — se enseñan las dos cifras con su base, no solo la más vistosa.
 
 ---
 

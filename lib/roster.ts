@@ -626,15 +626,15 @@ export const ROSTER: AgentDef[] = [
     name: "Kai Moreno",
     role: "Planificador de Rutas",
     dept: "logistica",
-    bio: "Recalcula el reparto de 38 vehículos cada vez que entra un pedido urgente o cambia el tráfico. Ahorra kilómetros sin romper ninguna ventana de entrega.",
+    bio: "Reparte los pedidos del día entre los seis domiciliarios y ordena la ruta de cada uno sobre las calles reales de Medellín. Ahorra kilómetros sin romper ninguna ventana de entrega.",
     model: "opus-5",
     tools: ["Routific", "Google Maps", "SAP", "Twilio"],
     tasks: [
-      "Recalculando 38 rutas por corte en la A-2",
-      "Encajando 14 entregas urgentes en el reparto de tarde",
-      "Optimizando carga del vehículo 21 al 94 %",
-      "Avisando a 9 clientes de una nueva franja horaria",
-      "Comparando kilómetros previstos frente a reales",
+      "Repartiendo 40 pedidos entre 6 domiciliarios",
+      "Encajando 9 entregas express antes de las 12:00",
+      "Ordenando las 9 paradas del furgón por El Poblado",
+      "Comparando su plan contra el reparto por orden de llegada",
+      "Avisando a 3 clientes de una nueva franja horaria",
     ],
     palette: P(HAIR[0], SKIN[2], "#9B7BFF", "#2C2A50", "#181630", "#D6C9FF"),
     deployedDays: 208,
@@ -808,6 +808,9 @@ export const AGENT_COUNT = ROSTER.length;
 
 /** El único agente que ejecuta trabajo real contra APIs externas, no simulado. */
 export const LEAD_HUNTER_ID = "mkt-08";
+
+/** El que planifica el reparto de verdad, con distancias reales de calle. */
+export const ROUTE_PLANNER_ID = "log-01";
 
 export const AGENTS_BY_DEPT = {
   marketing: ROSTER.filter((a) => a.dept === "marketing"),

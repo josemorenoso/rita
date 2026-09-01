@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 3000"
+    "start": "next start -p 3000",
+    "rutas:congelar": "node --import ./scripts/resolver-ts.mjs scripts/rutas-congelar.ts"
   },
   "dependencies": {
     "next": "^16.3.0",

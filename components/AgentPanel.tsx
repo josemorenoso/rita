@@ -18,11 +18,14 @@ export default function AgentPanel({
   agent,
   onClose,
   huntHref,
+  routeHref,
 }: {
   agent: AgentState;
   onClose: () => void;
   /** Solo lo recibe el agente que sabe buscar clientes de verdad. */
   huntHref?: string;
+  /** Solo lo recibe el agente que planifica rutas de verdad. */
+  routeHref?: string;
 }) {
   const d = agent.def;
   const dept = DEPT_BY_ID[d.dept];
@@ -64,6 +67,17 @@ export default function AgentPanel({
       )}
 
       {huntHref && <AgentDiagram title="Así funciona por dentro" />}
+
+      {routeHref && (
+        <section className="panel-hunt">
+          <Link className="hunt-cta" href={routeHref}>
+            ▶ Abrir el reparto de hoy
+          </Link>
+          <p>
+            Reparte 40 pedidos entre 6 domiciliarios y traza la ruta de cada uno sobre las calles reales de Medellín.
+          </p>
+        </section>
+      )}
 
       <section className="panel-task">
         <span className="panel-label">Tarea en curso</span>
