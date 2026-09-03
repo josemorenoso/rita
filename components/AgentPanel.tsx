@@ -19,6 +19,7 @@ export default function AgentPanel({
   onClose,
   huntHref,
   routeHref,
+  auditHref,
 }: {
   agent: AgentState;
   onClose: () => void;
@@ -26,6 +27,8 @@ export default function AgentPanel({
   huntHref?: string;
   /** Solo lo recibe el agente que planifica rutas de verdad. */
   routeHref?: string;
+  /** Solo lo recibe la agente que audita las cuentas de verdad. */
+  auditHref?: string;
 }) {
   const d = agent.def;
   const dept = DEPT_BY_ID[d.dept];
@@ -75,6 +78,17 @@ export default function AgentPanel({
           </Link>
           <p>
             Reparte 40 pedidos entre 6 domiciliarios y traza la ruta de cada uno sobre las calles reales de Medellín.
+          </p>
+        </section>
+      )}
+
+      {auditHref && (
+        <section className="panel-hunt">
+          <Link className="hunt-cta" href={auditHref}>
+            ▶ Auditar las cuentas de un cliente
+          </Link>
+          <p>
+            Lee las exportaciones del ERP y devuelve, con la fila exacta delante, dónde se está yendo el dinero.
           </p>
         </section>
       )}

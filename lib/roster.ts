@@ -812,6 +812,9 @@ export const LEAD_HUNTER_ID = "mkt-08";
 /** El que planifica el reparto de verdad, con distancias reales de calle. */
 export const ROUTE_PLANNER_ID = "log-01";
 
+/** La que audita las cuentas de verdad: su herramienta es LUPA. */
+export const AUDITOR_ID = "fin-05";
+
 export const AGENTS_BY_DEPT = {
   marketing: ROSTER.filter((a) => a.dept === "marketing"),
   ventas: ROSTER.filter((a) => a.dept === "ventas"),

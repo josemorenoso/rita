@@ -1,0 +1,844 @@
+/* ─────────────────────  LOS GRÁFICOS DE LUPA  ─────────────────────
+   Todo lo que pinta `components/lupa/graficos.tsx`, y nada más. Prefijo
+   `.lupa-g-` en cada selector: esta hoja convive con las otras cinco
+   pantallas del repo y ninguna clase puede tocarlas.
+
+   Instrumento forense, no cuadro de mando: fondo negro azulado, una sola
+   tinta por idea (rojo = fuga probada, ámbar = sospecha, cian = referencia
+   sana) y ni un degradado que no esté diciendo algo. Nada aquí decora.
+   ------------------------------------------------------------------- */
+
+/* Los tokens los declara la pantalla contenedora. Se alían aquí con un
+   respaldo para que un gráfico montado fuera de ella —una prueba, una
+   captura suelta para el guion— salga con exactamente la misma paleta. */
+.lupa-g {
+  --g-void: var(--lupa-void, #05070f);
+  --g-deck: var(--lupa-deck, #080b16);
+  --g-panel: var(--lupa-panel, #0b0f1e);
+  --g-panel-2: var(--lupa-panel-2, #101627);
+  --g-line: var(--lupa-line, #1b2338);
+  --g-line-soft: var(--lupa-line-soft, #141a2b);
+  --g-ink: var(--lupa-ink, #e8edf7);
+  --g-ink-2: var(--lupa-ink-2, #a5b0c9);
+  --g-dim: var(--lupa-dim, #6b7695);
+  --g-rojo: var(--lupa-rojo, #ff4d5e);
+  --g-ambar: var(--lupa-ambar, #ffb020);
+  --g-verde: var(--lupa-verde, #37d67a);
+  --g-bus: var(--lupa-bus, #4de1ff);
+
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--g-ink);
+}
+
+.lupa-g svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+.lupa-g-vacio {
+  padding: 18px;
+  font-size: 11px;
+  color: var(--g-dim);
+  letter-spacing: 0.1em;
+}
+
+/* Ejes y rejilla, compartidos por los cuatro gráficos de coordenadas. */
+.lupa-g-rejilla {
+  stroke: var(--g-line-soft);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.lupa-g-base {
+  stroke: var(--g-line);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.lupa-g-eje {
+  fill: var(--g-dim);
+  font-size: 10px;
+}
+.lupa-g-eje.der {
+  text-anchor: end;
+}
+.lupa-g-eje.izq {
+  text-anchor: start;
+}
+.lupa-g-eje.medio {
+  text-anchor: middle;
+  fill: var(--g-ink-2);
+  font-size: 11px;
+}
+.lupa-g-pie {
+  fill: var(--g-dim);
+  font-size: 9.5px;
+  letter-spacing: 0.07em;
+}
+.lupa-g-pie.centro {
+  text-anchor: middle;
+}
+
+/* ─────────────────────────────  CONTADOR  ───────────────────────────── */
+
+.lupa-g-contador {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lupa-g-contador-cifra {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: clamp(19px, 3.3vw, 40px);
+  line-height: 1.3;
+  color: var(--g-rojo);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--g-rojo) 42%, transparent);
+}
+
+/* El cursor va detrás de la cifra: mientras la auditoría corre, el número no
+   es un resultado, es una lectura en curso. Cuando para, deja de parpadear. */
+.lupa-g-contador-cursor {
+  display: inline-block;
+  width: clamp(8px, 1vw, 13px);
+  height: clamp(16px, 2.6vw, 30px);
+  background: var(--g-rojo);
+  opacity: 0.18;
+  transform: translateY(2px);
+}
+.lupa-g-contador-cursor.late {
+  opacity: 1;
+  animation: lupa-g-parpadeo 0.9s steps(1, end) infinite;
+}
+
+.lupa-g-contador-sufijo {
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--g-dim);
+}
+
+/* ────────────────────────────  WATERFALL  ──────────────────────────── */
+
+.lupa-g-wf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lupa-g-wf-fila {
+  display: grid;
+  grid-template-columns: minmax(120px, 168px) 1fr 76px 30px;
+  align-items: center;
+  gap: 12px;
+}
+
+.lupa-g-wf-nombre {
+  font-size: 11px;
+  color: var(--g-ink-2);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lupa-g-wf-carril {
+  position: relative;
+  height: 20px;
+  background: var(--g-panel-2);
+  border-left: 1px solid var(--g-line);
+}
+
+.lupa-g-wf-barra {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  background: var(--g-cat, var(--g-bus));
+  transform-origin: left center;
+  transition:
+    left 0.55s cubic-bezier(0.22, 0.9, 0.25, 1),
+    width 0.55s cubic-bezier(0.22, 0.9, 0.25, 1);
+  animation: lupa-g-crecer 0.5s cubic-bezier(0.22, 0.9, 0.25, 1) both;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--g-cat, var(--g-bus)) 35%, transparent);
+}
+
+/* El escalón: la línea que baja desde donde acaba un peldaño hasta donde
+   arranca el siguiente. Sin ella son cuatro barras sueltas, no una cascada. */
+.lupa-g-wf-fila:not(:last-child) .lupa-g-wf-barra::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: calc(100% + 3px);
+  height: 12px;
+  border-right: 1px dashed var(--g-line);
+}
+
+.lupa-g-wf-monto {
+  font-size: 11px;
+  text-align: right;
+  color: var(--g-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.lupa-g-wf-conteo {
+  font-size: 10px;
+  text-align: right;
+  color: var(--g-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lupa-g-wf-total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--g-line-soft);
+}
+.lupa-g-wf-total .lupa-g-wf-nombre,
+.lupa-g-wf-total .lupa-g-wf-monto {
+  color: var(--g-rojo);
+  letter-spacing: 0.04em;
+}
+.lupa-g-wf-barra.union {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--g-rojo) 26%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  border: 1px solid color-mix(in srgb, var(--g-rojo) 70%, transparent);
+  box-shadow: none;
+}
+
+/* ──────────────────────────────  ANILLO  ────────────────────────────── */
+
+.lupa-g-anillo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.lupa-g-anillo-svg {
+  width: 158px;
+  max-width: 100%;
+}
+
+.lupa-g-anillo-pista {
+  fill: none;
+  stroke: var(--g-line-soft);
+  stroke-width: 15;
+}
+
+.lupa-g-anillo-tramo {
+  fill: none;
+  stroke-width: 15;
+  transform: rotate(-90deg);
+  transform-origin: 80px 80px;
+  transition:
+    stroke-dasharray 0.5s ease,
+    stroke-dashoffset 0.5s ease;
+}
+
+.lupa-g-anillo-cifra {
+  fill: var(--g-ink);
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 21px;
+  text-anchor: middle;
+}
+
+.lupa-g-anillo-pie {
+  fill: var(--g-dim);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-anchor: middle;
+}
+
+.lupa-g-anillo-chips {
+  display: flex;
+  gap: 14px;
+}
+
+.lupa-g-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--g-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.lupa-g-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex: 0 0 auto;
+}
+
+/* ─────────────────────────────  BENFORD  ───────────────────────────── */
+
+.lupa-g-benford-barra {
+  fill: color-mix(in srgb, var(--g-bus) 48%, transparent);
+  transition:
+    y 0.45s ease,
+    height 0.45s ease;
+}
+
+/* El dígito que se pasa de su cuota es el único que se enciende: es la
+   lectura completa del gráfico en un solo golpe de vista. */
+.lupa-g-benford-barra.excedida {
+  fill: color-mix(in srgb, var(--g-ambar) 82%, transparent);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--g-ambar) 45%, transparent));
+}
+
+.lupa-g-benford-curva {
+  fill: none;
+  stroke: var(--g-ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.lupa-g-benford-punto {
+  fill: var(--g-deck);
+  stroke: var(--g-ink);
+  stroke-width: 1.5;
+}
+
+.lupa-g-benford-stat {
+  fill: var(--g-ink-2);
+  font-size: 11px;
+  text-anchor: end;
+  letter-spacing: 0.06em;
+}
+
+/* ───────────────────────────  SERIE DE PRECIO  ─────────────────────── */
+
+.lupa-g-precio-banda {
+  fill: color-mix(in srgb, var(--g-bus) 16%, transparent);
+}
+
+.lupa-g-precio-ref {
+  stroke: var(--g-bus);
+  stroke-width: 1.2;
+  stroke-dasharray: 6 5;
+  opacity: 0.9;
+}
+
+/* La fuga, dibujada: lo que se pagó por encima de lo que pagan los demás. */
+.lupa-g-precio-sobrecosto {
+  fill: color-mix(in srgb, var(--g-rojo) 24%, transparent);
+}
+
+.lupa-g-precio-linea {
+  fill: none;
+  stroke: var(--g-ambar);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.lupa-g-precio-punto {
+  fill: var(--g-deck);
+  stroke: var(--g-ambar);
+  stroke-width: 1.6;
+}
+.lupa-g-precio-punto.ultimo {
+  fill: var(--g-rojo);
+  stroke: var(--g-rojo);
+}
+
+.lupa-g-precio-etiqueta {
+  fill: var(--g-bus);
+  font-size: 10px;
+  text-anchor: end;
+  letter-spacing: 0.04em;
+}
+
+.lupa-g-precio-ultimo {
+  fill: var(--g-rojo);
+  font-size: 11px;
+  text-anchor: end;
+  paint-order: stroke;
+  stroke: var(--g-panel);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* ──────────────────────────────  BARRAS  ───────────────────────────── */
+
+.lupa-g-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lupa-g-barras-fila {
+  display: grid;
+  grid-template-columns: minmax(88px, 168px) 1fr 74px;
+  align-items: center;
+  gap: 10px;
+}
+
+.lupa-g-barras-nombre {
+  font-size: 11px;
+  color: var(--g-ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lupa-g-barras-carril {
+  height: 14px;
+  background: var(--g-panel-2);
+  overflow: hidden;
+}
+
+.lupa-g-barras-barra {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--g-bus) 62%, transparent);
+  transform-origin: left center;
+  transition: width 0.5s cubic-bezier(0.22, 0.9, 0.25, 1);
+  animation: lupa-g-crecer 0.45s cubic-bezier(0.22, 0.9, 0.25, 1) both;
+}
+
+.lupa-g-barras-valor {
+  font-size: 11px;
+  text-align: right;
+  color: var(--g-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.lupa-g-barras-fila.marcada .lupa-g-barras-barra {
+  background: var(--g-rojo);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--g-rojo) 40%, transparent);
+}
+.lupa-g-barras-fila.marcada .lupa-g-barras-nombre,
+.lupa-g-barras-fila.marcada .lupa-g-barras-valor {
+  color: var(--g-rojo);
+}
+
+/* ───────────────────────────────  RELOJ  ───────────────────────────── */
+
+.lupa-g-reloj svg {
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.lupa-g-reloj-borde {
+  fill: none;
+  stroke: var(--g-line-soft);
+  stroke-width: 1;
+}
+
+.lupa-g-reloj-jornada {
+  fill: none;
+  stroke: color-mix(in srgb, var(--g-bus) 45%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.lupa-g-reloj-sector.laboral {
+  fill: color-mix(in srgb, var(--g-bus) 40%, transparent);
+}
+.lupa-g-reloj-sector.fuera {
+  fill: color-mix(in srgb, var(--g-ambar) 78%, transparent);
+}
+.lupa-g-reloj-sector.madrugada {
+  fill: var(--g-rojo);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--g-rojo) 55%, transparent));
+}
+.lupa-g-reloj-sector.cero {
+  fill: var(--g-line-soft);
+}
+
+.lupa-g-reloj-hora {
+  fill: var(--g-dim);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+
+.lupa-g-reloj-pico {
+  fill: var(--g-rojo);
+  font-size: 10px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--g-void);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.lupa-g-reloj-total {
+  fill: var(--g-ink);
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 14px;
+  text-anchor: middle;
+}
+
+.lupa-g-reloj-pie {
+  fill: var(--g-dim);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-anchor: middle;
+}
+
+/* ──────────────────────────  GRAFO DE VÍNCULOS  ────────────────────── */
+
+.lupa-g-arista-linea {
+  stroke: var(--g-line);
+  stroke-width: 1.4;
+}
+
+.lupa-g-arista-texto {
+  fill: var(--g-dim);
+  font-size: 9.5px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--g-panel);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.lupa-g-arista.alerta .lupa-g-arista-linea {
+  stroke: color-mix(in srgb, var(--g-rojo) 42%, transparent);
+  stroke-width: 3.2;
+}
+.lupa-g-arista.alerta .lupa-g-arista-texto {
+  fill: var(--g-rojo);
+  font-size: 10.5px;
+}
+
+/* El trazo que recorre la arista en alerta. Es lo único animado del plano:
+   el ojo va solo a la línea que une al proveedor con la empleada. */
+.lupa-g-arista-recorrido {
+  stroke: var(--g-rojo);
+  stroke-width: 3.2;
+  stroke-dasharray: 9 13;
+  stroke-linecap: round;
+  animation: lupa-g-recorrido 1.1s linear infinite;
+}
+
+.lupa-g-nodo-forma {
+  fill: var(--g-panel-2);
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.lupa-g-nodo-glifo {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lupa-g-nodo-etiqueta {
+  fill: var(--g-ink);
+  font-size: 11px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--g-panel);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.lupa-g-nodo-clase {
+  fill: currentColor;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-anchor: middle;
+  opacity: 0.7;
+}
+
+/* Un color por clase, y el mismo siempre: la forma dice qué es y el color
+   refuerza. Quien toca una arista en alerta se pone rojo, sin excepción. */
+.lupa-g-nodo.c-proveedor {
+  color: var(--g-ambar);
+}
+.lupa-g-nodo.c-empleado {
+  color: #c08bff;
+}
+.lupa-g-nodo.c-usuario {
+  color: var(--g-bus);
+}
+.lupa-g-nodo.c-documento {
+  color: var(--g-ink-2);
+}
+.lupa-g-nodo.c-sku {
+  color: var(--g-verde);
+}
+.lupa-g-nodo.c-banco {
+  color: var(--g-ink);
+}
+
+.lupa-g-nodo.marcado {
+  color: var(--g-rojo);
+}
+.lupa-g-nodo.marcado .lupa-g-nodo-etiqueta {
+  fill: var(--g-rojo);
+}
+
+/* El latido se hace con `transform`, no con el radio: animar `r` desde CSS
+   solo lo entienden algunos motores y este halo es lo que dirige la mirada. */
+.lupa-g-nodo-halo {
+  fill: color-mix(in srgb, var(--g-rojo) 10%, transparent);
+  stroke: color-mix(in srgb, var(--g-rojo) 50%, transparent);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lupa-g-latido 2.2s ease-in-out infinite;
+}
+
+/* ──────────────────────────  MATRIZ DE REGLAS  ─────────────────────── */
+
+.lupa-g-matriz {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lupa-g-matriz-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--g-line-soft);
+}
+
+.lupa-g-matriz-nombre {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--g-dim);
+}
+.lupa-g-matriz-nombre b {
+  color: var(--g-ink-2);
+  font-weight: 600;
+}
+
+.lupa-g-matriz-cuenta {
+  font-size: 10px;
+  color: var(--g-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lupa-g-matriz-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 5px;
+}
+
+.lupa-g-celda {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--g-line);
+  background: var(--g-panel);
+  color: var(--g-dim);
+  cursor: default;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.lupa-g-celda.e-limpia {
+  color: color-mix(in srgb, var(--g-verde) 72%, var(--g-ink));
+  border-color: color-mix(in srgb, var(--g-verde) 30%, transparent);
+  background: color-mix(in srgb, var(--g-verde) 8%, var(--g-panel));
+}
+
+.lupa-g-celda.e-hallazgo {
+  color: var(--g-void);
+  font-weight: 600;
+  background: var(--g-rojo);
+  border-color: var(--g-rojo);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--g-rojo) 38%, transparent);
+}
+
+/* Trama diagonal y apagada: lo que no se pudo evaluar tiene que verse tan
+   claro como lo que sí, o el panel de cobertura no vale nada. */
+.lupa-g-celda.e-no_evaluable {
+  background: repeating-linear-gradient(45deg, var(--g-panel) 0 4px, var(--g-panel-2) 4px 8px);
+  border-style: dashed;
+  color: var(--g-dim);
+  opacity: 0.7;
+}
+
+.lupa-g-celda.activa {
+  border-color: var(--g-bus);
+  color: var(--g-bus);
+  animation: lupa-g-pulso 1s ease-in-out infinite;
+}
+
+.lupa-g-matriz-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.lupa-g-muestra {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--g-line);
+  background: var(--g-panel);
+  flex: 0 0 auto;
+}
+.lupa-g-muestra.e-limpia {
+  border-color: color-mix(in srgb, var(--g-verde) 30%, transparent);
+  background: color-mix(in srgb, var(--g-verde) 22%, var(--g-panel));
+}
+.lupa-g-muestra.e-hallazgo {
+  border-color: var(--g-rojo);
+  background: var(--g-rojo);
+}
+.lupa-g-muestra.e-no_evaluable {
+  border-style: dashed;
+  background: repeating-linear-gradient(45deg, var(--g-panel) 0 3px, var(--g-panel-2) 3px 6px);
+}
+
+.lupa-g-pista {
+  position: absolute;
+  z-index: 6;
+  transform: translateY(-100%);
+  margin-top: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--g-deck);
+  border: 1px solid var(--g-line);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.lupa-g-pista b {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--g-ink);
+}
+.lupa-g-pista span {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--g-ink-2);
+}
+
+/* ─────────────────────────────  BARRA DE SCORE  ─────────────────────── */
+
+.lupa-g-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lupa-g-score.s-rojo {
+  --g-marca: var(--g-rojo);
+}
+.lupa-g-score.s-amarillo {
+  --g-marca: var(--g-ambar);
+}
+.lupa-g-score.s-verde {
+  --g-marca: var(--g-verde);
+}
+
+.lupa-g-score-carril {
+  position: relative;
+  flex: 1 1 auto;
+  height: 6px;
+  background: var(--g-panel-2);
+  overflow: hidden;
+}
+
+.lupa-g-score-relleno {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--g-marca);
+  transition: width 0.5s cubic-bezier(0.22, 0.9, 0.25, 1);
+}
+
+/* Las dos fronteras del semáforo (40 y 70) van dibujadas: sin ellas el
+   relleno es una barra bonita que no se puede leer contra nada. */
+.lupa-g-score-marca {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--g-void);
+  opacity: 0.85;
+}
+
+.lupa-g-score-cifra {
+  min-width: 22px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--g-marca);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────────────────────  MOVIMIENTO  ───────────────────────── */
+
+@keyframes lupa-g-parpadeo {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.08;
+  }
+}
+
+@keyframes lupa-g-crecer {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes lupa-g-recorrido {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -44;
+  }
+}
+
+@keyframes lupa-g-latido {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes lupa-g-pulso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--g-bus) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--g-bus) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lupa-g *,
+  .lupa-g *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

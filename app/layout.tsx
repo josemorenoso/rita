@@ -6,6 +6,7 @@ import "./leadhunter.css";
 import "./finder.css";
 import "./diagram.css";
 import "./rutas.css";
+import "./lupa.css";
 
 const pixel = Press_Start_2P({
   weight: "400",
