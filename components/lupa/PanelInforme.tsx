@@ -6,7 +6,6 @@ import {
   Barras,
   BarraScore,
   Benford,
-  Contador,
   GrafoVinculos,
   MatrizReglas,
   Reloj,
@@ -18,8 +17,8 @@ import { cop, copCorto, fecha, numero, pctL } from "@/lib/lupa/moneda";
 import type { CategoriaFuga, EstadoRegla, Hallazgo, Informe, Semaforo } from "@/lib/lupa/tipos";
 
 /* El informe. La misma rejilla sirve para ver correr la auditoría y para
-   leerla después: a la izquierda todo lo que se revisó, en el centro la cifra
-   y el detalle, a la derecha lo que se encontró.
+   leerla después: a la izquierda todo lo que se revisó, en el centro el
+   detalle, a la derecha lo que se encontró.
 
    No hay salto de pantalla entre auditar y leer porque ese salto es justo el
    momento que se narra: la consola se apaga, se abre el hallazgo más grave y
@@ -163,7 +162,6 @@ export default function PanelInforme({
         <div className="lupa-banda">
           <div className="lupa-titular">
             <span className="panel-label">Dinero en riesgo detectado</span>
-            <Contador valor={vivo.acumulado} activo={enVivo} />
             <span className="lupa-titular-pie">
               {pctL((vivo.acumulado / informe.facturacion) * 100)} de {copCorto(informe.facturacion)} facturados en
               el período · sin contar dos veces ningún documento

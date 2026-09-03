@@ -306,6 +306,11 @@ exigir(
   informe.eventos.every((e, i) => e.seq === i),
   "Eventos: la secuencia no es correlativa",
 );
+// A 180 ms por evento, la animación tiene que durar entre 16 y 20 segundos.
+exigir(
+  informe.eventos.length >= 90 && informe.eventos.length <= 110,
+  `Eventos: son ${informe.eventos.length} y la animación necesita entre 90 y 110`,
+);
 exigir(
   informe.eventos.every((e, i) => i === 0 || e.acumulado >= informe.eventos[i - 1].acumulado),
   "Eventos: el acumulado baja en algún paso, y el contador de pantalla solo sube",

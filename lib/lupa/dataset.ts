@@ -506,92 +506,198 @@ type Producto = {
   altaMargen: boolean;
 };
 
-const FAMILIAS: { prefijo: string; categoria: string; bases: string[]; presentaciones: string[]; costo: [number, number] }[] = [
+/**
+ * Cada referencia es una base y una presentación de las que esa base admite. No
+ * se combinan al azar: «Toalla de manos 1 L» no existe en ningún catálogo, y el
+ * Excel se abre en cámara y se lee.
+ *
+ * El costo tampoco se sortea suelto. Cada base trae el precio mayorista de su
+ * unidad —un kilo, un litro, una unidad suelta— y la presentación lo multiplica
+ * por lo que de verdad contiene. Así el bulto de arroz de 25 kg vale veinticinco
+ * veces el kilo, la pimienta cuesta treinta veces lo que la sal, y ninguna línea
+ * del detalle delata al generador. Los dos primeros números están atados a los
+ * casos sembrados: el aceite a 4.425 el litro da los 88.500 del bidón de S4, y
+ * el arroz a 4.600 el kilo da los 115.000 del bulto de S5.
+ */
+const FAMILIAS: { prefijo: string; categoria: string; porMetro: number; bases: [string, number, string[]][] }[] = [
   {
     prefijo: "ACE",
     categoria: "Aceites y grasas",
-    bases: ["Aceite vegetal", "Aceite de girasol", "Aceite de soya", "Manteca vegetal", "Margarina industrial", "Aceite de palma"],
-    presentaciones: ["1 L", "3 L", "5 L", "20 L", "x 12"],
-    costo: [9_000, 190_000],
+    porMetro: 1,
+    bases: [
+      ["Aceite vegetal", 4_425, ["1 L", "3 L", "5 L", "20 L", "12 x 1 L"]],
+      ["Aceite de girasol", 7_800, ["1 L", "3 L", "5 L", "12 x 1 L"]],
+      ["Aceite de soya", 5_200, ["1 L", "3 L", "20 L"]],
+      ["Manteca vegetal", 6_400, ["500 g", "1 kg", "4 kg", "15 kg"]],
+      ["Margarina industrial", 8_900, ["500 g", "1 kg", "4 kg", "10 kg"]],
+      ["Aceite de palma", 4_900, ["3 L", "5 L", "20 L"]],
+    ],
   },
   {
     prefijo: "ARR",
     categoria: "Granos y cereales",
-    bases: ["Arroz blanco", "Arroz integral", "Fríjol cargamanto", "Lenteja", "Garbanzo", "Arveja seca", "Maíz trillado"],
-    presentaciones: ["500 g", "1 kg", "5 kg", "12,5 kg", "25 kg"],
-    costo: [3_500, 160_000],
+    porMetro: 1,
+    bases: [
+      ["Arroz blanco", 4_600, ["500 g", "1 kg", "5 kg", "12,5 kg", "25 kg"]],
+      ["Arroz integral", 6_200, ["500 g", "1 kg", "5 kg"]],
+      ["Fríjol cargamanto", 9_800, ["500 g", "1 kg", "5 kg", "25 kg"]],
+      ["Lenteja", 5_400, ["500 g", "1 kg", "5 kg"]],
+      ["Garbanzo", 8_600, ["500 g", "1 kg", "5 kg"]],
+      ["Arveja seca", 5_100, ["500 g", "1 kg", "5 kg"]],
+      ["Maíz trillado", 3_400, ["1 kg", "5 kg", "25 kg"]],
+    ],
   },
   {
     prefijo: "ENL",
     categoria: "Enlatados",
-    bases: ["Atún en lomos", "Sardina en salsa", "Maíz dulce", "Arveja en conserva", "Champiñones", "Duraznos en almíbar"],
-    presentaciones: ["x 12", "x 24", "x 48", "1 kg", "3 kg"],
-    costo: [6_000, 210_000],
+    porMetro: 1,
+    bases: [
+      ["Atún en lomos", 34_000, ["170 g", "12 x 170 g", "24 x 170 g", "48 x 170 g"]],
+      ["Sardina en salsa", 12_500, ["425 g", "12 x 425 g", "24 x 425 g"]],
+      ["Maíz dulce", 9_800, ["425 g", "12 x 425 g", "24 x 425 g"]],
+      ["Arveja en conserva", 9_200, ["425 g", "12 x 425 g", "24 x 425 g"]],
+      ["Champiñones laminados", 24_000, ["184 g", "12 x 184 g", "24 x 184 g"]],
+      ["Duraznos en almíbar", 11_400, ["820 g", "12 x 820 g"]],
+    ],
   },
   {
     prefijo: "LAC",
     categoria: "Lácteos",
-    bases: ["Leche entera UHT", "Leche deslactosada", "Queso campesino", "Queso mozzarella", "Crema de leche", "Yogur natural", "Mantequilla"],
-    presentaciones: ["1 L", "x 12", "500 g", "2,5 kg", "5 kg"],
-    costo: [4_200, 175_000],
+    porMetro: 1,
+    bases: [
+      ["Leche entera UHT", 3_900, ["1 L", "12 x 1 L", "24 x 1 L"]],
+      ["Leche deslactosada", 4_600, ["1 L", "12 x 1 L"]],
+      ["Queso campesino", 15_500, ["500 g", "1 kg", "2,5 kg"]],
+      ["Queso mozzarella", 19_800, ["500 g", "1 kg", "5 kg"]],
+      ["Crema de leche", 9_400, ["500 ml", "1 L", "12 x 500 ml"]],
+      ["Yogur natural", 5_200, ["1 L", "6 x 1 L", "12 x 1 L"]],
+      ["Mantequilla", 21_000, ["250 g", "500 g", "1 kg"]],
+    ],
   },
   {
     prefijo: "DES",
     categoria: "Desechables",
-    bases: ["Vaso desechable 7 oz", "Plato desechable hondo", "Servilleta cuadrada", "Bolsa de basura calibre 2", "Contenedor de icopor", "Cubiertos desechables", "Papel aluminio"],
-    presentaciones: ["x 50", "x 100", "x 500", "x 1000", "rollo"],
-    costo: [4_800, 120_000],
+    porMetro: 1.3,
+    bases: [
+      ["Vaso desechable 7 oz", 95, ["50 un", "100 un", "1000 un"]],
+      ["Plato desechable hondo", 180, ["25 un", "100 un", "500 un"]],
+      ["Servilleta cuadrada", 22, ["100 un", "500 un", "1000 un"]],
+      ["Bolsa de basura calibre 2", 640, ["10 un", "50 un", "100 un"]],
+      ["Contenedor de icopor", 320, ["25 un", "125 un", "500 un"]],
+      ["Cubiertos desechables", 58, ["50 un", "500 un", "1000 un"]],
+      ["Papel aluminio", 205, ["rollo 30 m", "rollo 100 m", "6 x rollo 30 m"]],
+    ],
   },
   {
     prefijo: "ASE",
     categoria: "Aseo y limpieza",
-    bases: ["Detergente en polvo", "Jabón líquido de manos", "Blanqueador", "Desinfectante lavanda", "Limpiavidrios", "Papel higiénico institucional", "Toalla de manos"],
-    presentaciones: ["1 L", "3,8 L", "5 kg", "x 12", "x 6"],
-    costo: [5_500, 145_000],
+    porMetro: 0.011,
+    bases: [
+      ["Detergente en polvo", 4_200, ["1 kg", "5 kg", "15 kg"]],
+      ["Jabón líquido de manos", 6_800, ["1 L", "3,8 L", "12 x 1 L"]],
+      ["Blanqueador", 2_400, ["1 L", "2 L", "3,8 L", "20 L"]],
+      ["Desinfectante lavanda", 3_100, ["1 L", "3,8 L", "20 L"]],
+      ["Limpiavidrios", 5_600, ["500 ml", "1 L", "3,8 L"]],
+      ["Papel higiénico institucional", 8_100, ["rollo 250 m", "4 x rollo 250 m", "12 x rollo 250 m"]],
+      ["Toalla de manos", 8_900, ["rollo 150 m", "6 x rollo 150 m", "12 x rollo 150 m"]],
+    ],
   },
   {
     prefijo: "BEB",
     categoria: "Bebidas",
-    bases: ["Gaseosa cola", "Agua en botella", "Jugo de caja surtido", "Té helado", "Bebida hidratante", "Malta", "Refresco en polvo"],
-    presentaciones: ["x 6", "x 12", "x 24", "1,5 L", "600 ml"],
-    costo: [3_800, 95_000],
+    porMetro: 1,
+    bases: [
+      ["Gaseosa cola", 2_600, ["1,5 L", "2,5 L", "6 x 1,5 L", "12 x 1,5 L"]],
+      ["Agua en botella", 1_100, ["600 ml", "12 x 600 ml", "24 x 600 ml"]],
+      ["Jugo de caja surtido", 4_200, ["200 ml", "12 x 200 ml", "24 x 200 ml"]],
+      ["Té helado", 3_100, ["400 ml", "1,5 L", "12 x 400 ml"]],
+      ["Bebida hidratante", 4_800, ["500 ml", "12 x 500 ml", "24 x 500 ml"]],
+      ["Malta", 5_400, ["330 ml", "6 x 330 ml", "24 x 330 ml"]],
+      ["Refresco en polvo", 12_000, ["1 kg", "12 x 25 g", "24 x 25 g"]],
+    ],
   },
   {
     prefijo: "PAN",
     categoria: "Panadería",
-    bases: ["Harina de trigo fortificada", "Levadura seca", "Mezcla para ponqué", "Pan tajado", "Galleta de sal", "Tostada integral"],
-    presentaciones: ["500 g", "1 kg", "12,5 kg", "25 kg", "x 12"],
-    costo: [4_000, 130_000],
+    porMetro: 1,
+    bases: [
+      ["Harina de trigo fortificada", 3_400, ["1 kg", "12,5 kg", "25 kg"]],
+      ["Levadura seca", 22_000, ["500 g", "1 kg", "10 x 500 g"]],
+      ["Mezcla para ponqué", 7_800, ["1 kg", "5 kg", "10 kg"]],
+      ["Pan tajado", 6_200, ["450 g", "6 x 450 g", "12 x 450 g"]],
+      ["Galleta de sal", 9_500, ["3 kg", "12 x 300 g", "24 x 300 g"]],
+      ["Tostada integral", 14_000, ["12 x 200 g", "24 x 200 g"]],
+    ],
   },
   {
     prefijo: "CON",
     categoria: "Condimentos y salsas",
-    bases: ["Sal refinada", "Pimienta molida", "Comino molido", "Color en polvo", "Caldo en cubo", "Salsa de tomate", "Mayonesa", "Mostaza"],
-    presentaciones: ["500 g", "1 kg", "4 kg", "x 12", "x 24"],
-    costo: [3_200, 118_000],
+    porMetro: 1,
+    bases: [
+      ["Sal refinada", 1_500, ["500 g", "1 kg", "25 kg"]],
+      ["Pimienta molida", 42_000, ["500 g", "1 kg", "4 kg"]],
+      ["Comino molido", 28_000, ["500 g", "1 kg", "4 kg"]],
+      ["Color en polvo", 9_800, ["500 g", "1 kg", "4 kg"]],
+      ["Caldo en cubo", 24_000, ["12 x 100 g", "24 x 100 g", "96 x 100 g"]],
+      ["Salsa de tomate", 6_900, ["1 kg", "4 kg", "12 x 1 kg"]],
+      ["Mayonesa", 9_400, ["1 kg", "3,8 kg", "12 x 1 kg"]],
+      ["Mostaza", 7_200, ["1 kg", "3,8 kg", "12 x 1 kg"]],
+    ],
   },
   {
     prefijo: "CAR",
     categoria: "Cárnicos y embutidos",
-    bases: ["Salchicha coctel", "Chorizo santarrosano", "Jamón de cerdo", "Mortadela", "Tocineta ahumada", "Pechuga de pollo"],
-    presentaciones: ["500 g", "1 kg", "2,5 kg", "5 kg", "x 6"],
-    costo: [8_500, 230_000],
+    porMetro: 1,
+    bases: [
+      ["Salchicha coctel", 13_500, ["500 g", "1 kg", "2,5 kg"]],
+      ["Chorizo santarrosano", 18_900, ["500 g", "1 kg", "5 kg"]],
+      ["Jamón de cerdo", 22_500, ["500 g", "1 kg", "2,5 kg"]],
+      ["Mortadela", 11_800, ["1 kg", "2,5 kg", "5 kg"]],
+      ["Tocineta ahumada", 26_000, ["500 g", "1 kg", "2,5 kg"]],
+      ["Pechuga de pollo", 14_900, ["1 kg", "2,5 kg", "5 kg"]],
+    ],
   },
   {
     prefijo: "HAR",
     categoria: "Pastas y harinas",
-    bases: ["Pasta espagueti", "Pasta tornillo", "Harina de maíz precocida", "Fécula de maíz", "Avena en hojuelas"],
-    presentaciones: ["500 g", "1 kg", "5 kg", "10 kg", "x 24"],
-    costo: [2_900, 98_000],
+    porMetro: 1,
+    bases: [
+      ["Pasta espagueti", 4_800, ["500 g", "1 kg", "5 kg", "24 x 500 g"]],
+      ["Pasta tornillo", 4_900, ["500 g", "1 kg", "5 kg"]],
+      ["Harina de maíz precocida", 3_900, ["1 kg", "5 kg", "25 kg"]],
+      ["Fécula de maíz", 6_400, ["500 g", "1 kg", "5 kg"]],
+      ["Avena en hojuelas", 5_200, ["500 g", "1 kg", "10 kg"]],
+    ],
   },
   {
     prefijo: "AZU",
     categoria: "Azúcar y endulzantes",
-    bases: ["Azúcar blanca refinada", "Azúcar morena", "Panela pulverizada", "Endulzante en sobres", "Miel de abejas"],
-    presentaciones: ["1 kg", "5 kg", "12,5 kg", "25 kg", "x 100"],
-    costo: [3_600, 165_000],
+    porMetro: 1,
+    bases: [
+      ["Azúcar blanca refinada", 3_800, ["1 kg", "5 kg", "12,5 kg", "50 kg"]],
+      ["Azúcar morena", 4_400, ["1 kg", "5 kg", "25 kg"]],
+      ["Panela pulverizada", 5_600, ["500 g", "1 kg", "5 kg"]],
+      ["Endulzante en sobres", 95, ["50 un", "100 un", "500 un"]],
+      ["Miel de abejas", 18_000, ["330 g", "1 kg", "12 x 330 g"]],
+    ],
   },
 ];
+
+/** Cuánto contiene una presentación medido en la unidad de su base. Un rollo se
+    convierte con el factor de su familia: treinta metros de papel aluminio y
+    doscientos cincuenta de papel higiénico no valen lo mismo por metro. */
+function contenido(texto: string, porMetro: number): number {
+  const paquete = /^(\d+) x (.+)$/.exec(texto);
+  if (paquete) return Number(paquete[1]) * contenido(paquete[2], porMetro);
+  const rollo = /^rollo (\d+) m$/.exec(texto);
+  if (rollo) return Number(rollo[1]) * porMetro;
+  const unidades = /^(\d+) un$/.exec(texto);
+  if (unidades) return Number(unidades[1]);
+  const medida = /^(\d+(?:,\d+)?) (g|kg|ml|L)$/.exec(texto);
+  if (!medida) return 1;
+  const valor = Number(medida[1].replace(",", "."));
+  return medida[2] === "g" || medida[2] === "ml" ? valor / 1000 : valor;
+}
 
 const SERVICIOS = [
   "Servicio de transporte urbano",
@@ -652,12 +758,12 @@ function construirProductos(az: Azar): Producto[] {
       const sku = `${fam.prefijo}-${100 + i * 7}`;
       if (usados.has(sku)) continue;
       usados.add(sku);
-      const base = fam.bases[i % fam.bases.length];
-      const pres = fam.presentaciones[(i * 3 + 1) % fam.presentaciones.length];
-      // Lognormal recortada: la mayoría de referencias baratas y unas pocas
-      // caras, que es la forma real de un catálogo de distribución.
-      const t = Math.min(1, Math.max(0, 0.5 + az.normal() * 0.28));
-      const costo = aCien(fam.costo[0] + (fam.costo[1] - fam.costo[0]) * t * t);
+      const b = i % fam.bases.length;
+      const [base, unitario, presentaciones] = fam.bases[b];
+      const pres = presentaciones[Math.floor(i / fam.bases.length) % presentaciones.length];
+      // Un punto de dispersión por marca: dos referencias de la misma base no
+      // cuestan lo mismo al peso, pero tampoco se van a otro orden de magnitud.
+      const costo = Math.max(900, aCien(unitario * (0.94 + az.real() * 0.14) * contenido(pres, fam.porMetro)));
       const altaMargen = (fam.prefijo === "ASE" || fam.prefijo === "DES") && az.quizas(0.55);
       const margen = altaMargen ? 0.45 + az.real() * 0.04 : 0.22 + az.real() * 0.14;
       productos.push({
@@ -665,7 +771,7 @@ function construirProductos(az: Azar): Producto[] {
         nombre: `${base} ${pres}`,
         categoria: fam.categoria,
         costo,
-        precio: aCien(costo * (1 + margen)),
+        precio: Math.max(aCien(costo * (1 + margen)), costo + 300),
         inventariable: true,
         proveedores: [],
         activo: false,
@@ -1812,7 +1918,7 @@ function construirCompras(
       if (impuesto !== undefined) return { fc, dia: impuesto };
       // Dos órdenes al mismo proveedor el mismo día son compra fraccionada, y la
       // única tanda así del período es la sembrada.
-      let dia = Math.max(DIA_INICIO, habilDesde(aDia(fc.fecha) - az.entero(5, 15)));
+      let dia = Math.max(habilDesde(DIA_INICIO), habilDesde(aDia(fc.fecha) - az.entero(5, 15)));
       while (ocupadoOC.has(`${fc.terceroId}|${dia}`) && dia > DIA_INICIO) dia = habilAtras(dia - 1);
       ocupadoOC.add(`${fc.terceroId}|${dia}`);
       return { fc, dia };
@@ -2110,9 +2216,6 @@ function construirBanco(az: Azar, terceros: Sin<Tercero>[], compras: Compras, co
     for (let k = 0; k < 6; k++) {
       mete(dia(az.entero(0, mes.habiles.length - 1)), az.elige(["COMPRA DATAFONO INSUMOS", "PAGO PSE SERVICIOS TECNICOS", "DEBITO AUTOMATICO POLIZA", "PAGO PSE PAPELERIA", "RETIRO CAJERO OFICINA"]), aCien(180_000 + az.real() * 1_150_000), "debito", null, null);
     }
-    for (let k = 0; k < 19; k++) {
-      mete(dia(az.entero(0, mes.habiles.length - 1)), az.elige(["CONSIGNACION NACIONAL", "TRANSFERENCIA INTERBANCARIA ACH", "RECAUDO PSE CLIENTE", "CONSIGNACION EFECTIVO SUCURSAL"]), aCien(280_000 + az.real() * 2_600_000), "credito", null, null);
-    }
   }
   for (let i = 0; i < 12; i++) {
     mete(aISO(habilDesde(DIA_INICIO + 25 + i * 42)), "NOTA DEBITO CHEQUE DEVUELTO", aCien(320_000 + az.real() * 900_000), "debito", null, null);
@@ -2122,6 +2225,37 @@ function construirBanco(az: Azar, terceros: Sin<Tercero>[], compras: Compras, co
   SIN_SOPORTE_S9.forEach(([desc, monto], i) => {
     mete(aISO(habilDesde(DIA_INICIO + 40 + i * 57)), desc, monto, "debito", null, null);
   });
+
+  /* Lo que entra por caja sin pasar por un recibo conciliado. Se dimensiona
+     contra lo que salió ese mes porque una cuenta corriente que se hunde en
+     rojo mil millones distraería de lo que se está narrando: el público mira
+     el saldo aunque nadie lo mencione. */
+  const salidas = new Map<string, number>();
+  const entradas = new Map<string, number>();
+  for (const f of filas) {
+    const clave = f.fecha.slice(0, 7);
+    const destino = f.tipo === "debito" ? salidas : entradas;
+    destino.set(clave, (destino.get(clave) ?? 0) + f.monto);
+  }
+  for (const mes of MESES) {
+    const falta = (salidas.get(mes.clave) ?? 0) * 1.025 - (entradas.get(mes.clave) ?? 0);
+    if (falta <= 0) continue;
+    const cuantas = az.entero(20, 28);
+    let pendiente = falta;
+    for (let k = 0; k < cuantas; k++) {
+      const monto = k === cuantas - 1 ? Math.max(50_000, pendiente) : aCien((pendiente / (cuantas - k)) * (0.55 + az.real() * 0.9));
+      pendiente -= monto;
+      mete(
+        aISO(mes.habiles[az.entero(0, mes.habiles.length - 1)]),
+        az.elige(["CONSIGNACION NACIONAL", "TRANSFERENCIA INTERBANCARIA ACH", "RECAUDO PSE CLIENTE", "CONSIGNACION EFECTIVO SUCURSAL"]),
+        aCien(monto),
+        "credito",
+        null,
+        null,
+      );
+      if (pendiente <= 0) break;
+    }
+  }
 
   filas.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.descripcion < b.descripcion ? -1 : 1));
   filas.forEach((f, i) => (f.id = `BAN-${String(i + 1).padStart(4, "0")}`));
@@ -2141,7 +2275,7 @@ export function saldosDelExtracto(banco: MovimientoBanco[]): number[] {
     corriente += b.tipo === "credito" ? b.monto : -b.monto;
     if (corriente < minimo) minimo = corriente;
   }
-  const apertura = Math.ceil((-minimo + 40_000_000) / 1_000_000) * 1_000_000;
+  const apertura = Math.ceil((-minimo + 62_000_000) / 1_000_000) * 1_000_000;
   const saldos: number[] = [];
   let saldo = apertura;
   for (const b of banco) {

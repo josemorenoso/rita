@@ -458,7 +458,15 @@ function verificar(libro: Libro, casos: ReturnType<typeof construirDataset>["cas
     return venta > 0 ? (venta - costo) / venta : 1;
   };
   const bajoMargen = fvs.filter((d) => margenDe(d) < POLITICAS.margenMinimoPct / 100);
-  exige("S11", bajoMargen.length === 23, `${bajoMargen.length} facturas por debajo del 12 % de margen`);
+  const intrusas = bajoMargen.filter((d) => !casos.venta.s11.includes(d.numero));
+  exige(
+    "S11",
+    bajoMargen.length === 23 && intrusas.length === 0,
+    `${bajoMargen.length} facturas por debajo del 12 % de margen; sobran ${intrusas
+      .slice(0, 4)
+      .map((d) => `${d.numero} (${(margenDe(d) * 100).toFixed(1)} % · ${(lineasDe.get(d.numero) ?? []).map((l) => `${l.sku} ${l.precioUnitario}/${l.costoUnitario}`).join(" ")})`)
+      .join(", ")}`,
+  );
   exige("S11", bajoMargen.filter((d) => margenDe(d) < 0).length === 6, "no son seis las de margen negativo");
   exigeRango("S11", casos.sacrificadoS11, 8_800_000, 9_400_000, "margen sacrificado");
 

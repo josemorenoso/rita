@@ -20,7 +20,7 @@
  * reloj es `Informe.ms`, que no entra en ninguna comparación.
  */
 
-import { CATALOGO } from "./catalogo";
+import { CATALOGO, ETIQUETA_CAPA, ETIQUETA_CATEGORIA } from "./catalogo";
 import {
   construirIndice,
   type HallazgoCrudo,
@@ -645,9 +645,6 @@ export function auditar(libro: Libro): Informe {
   const sumaHallazgos = Math.round(hallazgos.filter(aportaAlTotal).reduce((s, h) => s + h.montoEnRiesgo, 0));
   const pctFacturacion = ix.facturacion > 0 ? (montoEnRiesgo / ix.facturacion) * 100 : 0;
 
-  /* 5 · El guion de la reproducción, con el contador cuadrando al céntimo. */
-  const eventos = construirEventos(ix, politicas, hayPoliticas, ejecuciones, composiciones, valorDe, montoEnRiesgo);
-
   const resultados: ResultadoRegla[] = ejecuciones.map((e) => {
     const r: ResultadoRegla = {
       reglaId: e.reglaId,
@@ -675,6 +672,18 @@ export function auditar(libro: Libro): Informe {
     amarillo: hallazgos.filter((h) => h.semaforo === "amarillo").length,
     verde: hallazgos.filter((h) => h.semaforo === "verde").length,
   };
+
+  /* 5 · El guion de la reproducción, con el contador cuadrando al céntimo. */
+  const eventos = construirEventos({
+    ix,
+    politicas,
+    hayPoliticas,
+    ejecuciones,
+    composiciones,
+    valorDe,
+    montoEnRiesgo,
+    porCategoria,
+  });
 
   return {
     empresa: libro.empresa,
@@ -828,15 +837,19 @@ function dedupEvidencia(xs: Hallazgo["evidencia"]): Hallazgo["evidencia"] {
  * en que corre su regla, y el último evento cierra exactamente en la cifra del
  * titular. No hay dos aritméticas.
  */
-function construirEventos(
-  ix: Indice,
-  politicas: Politicas,
-  hayPoliticas: boolean,
-  ejecuciones: Ejecucion[],
-  composiciones: Composicion[],
-  valorDe: (id: string) => number | null,
-  montoEnRiesgo: number,
-): EventoAuditoria[] {
+type Guion = {
+  ix: Indice;
+  politicas: Politicas;
+  hayPoliticas: boolean;
+  ejecuciones: Ejecucion[];
+  composiciones: Composicion[];
+  valorDe: (id: string) => number | null;
+  montoEnRiesgo: number;
+  porCategoria: Informe["porCategoria"];
+};
+
+function construirEventos(g: Guion): EventoAuditoria[] {
+  const { ix, politicas, hayPoliticas, ejecuciones, composiciones, valorDe, montoEnRiesgo } = g;
   const eventos: EventoAuditoria[] = [];
   const titular = new Titular(valorDe);
   let seq = 0;
@@ -844,7 +857,58 @@ function construirEventos(
     eventos.push({ seq: seq++, acumulado: Math.round(titular.total), ...e });
   };
 
+  /* Fase de carga: lo primero que se ve en pantalla es qué material entró. */
+  push({
+    reglaId: "CARGA",
+    marca: "run",
+    log: `Leyendo ${numero(ix.libro.archivos.length)} ficheros del cliente y normalizándolos al esquema canónico`,
+  });
+  for (const a of ix.libro.archivos) {
+    push({
+      reglaId: "CARGA",
+      marca: "ok",
+      log: `${a.nombre} · ${a.hojas.length} ${a.hojas.length === 1 ? "hoja" : "hojas"} · ${numero(a.filas)} filas · alimenta ${a.aporta.join(", ")}`,
+    });
+  }
+  push({
+    reglaId: "CARGA",
+    marca: "ok",
+    log:
+      `Índice construido: ${numero(ix.libro.terceros.length)} terceros, ${numero(ix.libro.documentos.length)} documentos, ` +
+      `${numero(ix.libro.lineas.length)} líneas, ${numero(ix.libro.inventario.length)} movimientos de inventario y ` +
+      `${numero(ix.libro.banco.length)} de banco`,
+  });
+
+  let capaEnCurso: Capa | null = null;
+  let hallazgosDeLaCapa = 0;
+  const cerrarCapa = () => {
+    if (capaEnCurso === null) return;
+    const capa = capaEnCurso;
+    push({
+      reglaId: `CAPA${capa}`,
+      marca: "ok",
+      log:
+        `Capa ${capa} terminada · ${numero(hallazgosDeLaCapa)} hallazgos · ` +
+        (capa === 3
+          ? "la capa 3 no suma dinero al titular: son anomalías, no fugas probadas"
+          : `acumulado ${copCorto(titular.total)}`),
+    });
+  };
+
   for (const e of ejecuciones) {
+    if (e.capa !== capaEnCurso) {
+      cerrarCapa();
+      capaEnCurso = e.capa;
+      hallazgosDeLaCapa = 0;
+      const cuantas = CATALOGO.filter((d) => d.capa === e.capa).length;
+      push({
+        reglaId: `CAPA${e.capa}`,
+        marca: "run",
+        log: `Capa ${e.capa} · ${ETIQUETA_CAPA[e.capa]} · ${numero(cuantas)} reglas`,
+      });
+    }
+    hallazgosDeLaCapa += e.hallazgos.length;
+
     push({ reglaId: e.reglaId, marca: "run", log: lineaRun(e.reglaId, e.nombre, ix, politicas, hayPoliticas) });
 
     if (e.crudo.estado === "no_evaluable") {
@@ -874,6 +938,8 @@ function construirEventos(
     }
   }
 
+  cerrarCapa();
+
   /* Fase de composición: aquí es donde las piezas sueltas se convierten en caso. */
   push({
     reglaId: "COMP",
@@ -894,9 +960,20 @@ function construirEventos(
       categoria: c.categoria,
     });
   }
+  /* El desglose que queda en pantalla cuando el contador ya paró. */
+  for (const c of g.porCategoria) {
+    eventos.push({
+      seq: seq++,
+      reglaId: "CIERRE",
+      marca: "ok",
+      log: `${ETIQUETA_CATEGORIA[c.categoria]} · ${cop(c.monto)} · ${numero(c.hallazgos)} hallazgos`,
+      acumulado: montoEnRiesgo,
+      categoria: c.categoria,
+    });
+  }
   eventos.push({
     seq: seq++,
-    reglaId: "COMP",
+    reglaId: "CIERRE",
     marca: "ok",
     log: `Cierre · ${cop(montoEnRiesgo)} en riesgo, ${pctL(ix.facturacion > 0 ? (montoEnRiesgo / ix.facturacion) * 100 : 0)} de la facturación del período`,
     acumulado: montoEnRiesgo,
