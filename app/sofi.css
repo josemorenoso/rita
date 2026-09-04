@@ -755,6 +755,37 @@
   color: var(--muted-2);
 }
 
+/* Entre una llamada y la otra: Sofi sigue sola, y se la puede parar. */
+.sofi-cuenta-atras {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: sofi-pop 0.3s ease-out both;
+}
+
+.sofi-cuenta-atras .sofi-llamar {
+  position: relative;
+  overflow: hidden;
+}
+
+.sofi-parar {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  color: var(--muted-2);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sofi-parar:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
 /* ─────────────────────────────  La ficha  ───────────────────────────── */
 
 .sofi-ficha {

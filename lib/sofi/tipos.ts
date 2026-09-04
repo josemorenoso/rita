@@ -1,8 +1,7 @@
 /* ─────────────────────────────  SOFI  ─────────────────────────────
-   Tipos compartidos por la pantalla, el reproductor del guion, la llamada
-   en vivo y la ruta de API. Todo lo que aparece en la ficha o en la agenda
-   tiene aquí su catálogo, para que las tres fuentes (guion grabado, agente
-   en vivo, interfaz) hablen exactamente el mismo idioma.
+   Tipos compartidos por la pantalla, la llamada y la ruta de API. Todo lo
+   que aparece en la ficha o en la agenda tiene aquí su catálogo, para que
+   las tres partes (agente, interfaz y servidor) hablen el mismo idioma.
    ------------------------------------------------------------------ */
 
 export type Canal = "WhatsApp" | "Web" | "Instagram" | "Llamada";
@@ -14,8 +13,11 @@ export interface Linea {
   unidad: string;
   /** Precio unitario en pesos. */
   precio: number;
-  /** Cómo lo dice Sofi en voz alta, en plural: «canecas de aceite vegetal de veinte litros». */
+  /** En plural: «canecas de aceite vegetal de veinte litros». */
   dicho: string;
+  /** En singular y con artículo, que aquí hay pedidos de uno solo:
+      «una caneca de aceite vegetal de veinte litros». */
+  uno: string;
 }
 
 export type Resultado =
@@ -101,7 +103,7 @@ export const RESULTADOS: Record<Resultado, { etiqueta: string; tono: "bien" | "m
   no_interesado: { etiqueta: "No le interesa", tono: "mal" },
 };
 
-/* ── Lo que pasa durante la llamada, venga del guion o del agente en vivo ── */
+/* ── Lo que pasa durante la llamada ── */
 
 export type Evento =
   | { tipo: "dato"; dato: Dato }
@@ -109,22 +111,6 @@ export type Evento =
   | { tipo: "cierre"; cierre: Cierre };
 
 export type Quien = "sofi" | "cliente";
-
-export interface Turno {
-  id: string;
-  quien: Quien;
-  /** Lo que se ve en pantalla. */
-  texto: string;
-  /** Lo que se manda a la voz, si difiere (etiquetas de emoción, etc.). */
-  voz?: string;
-  /** Se disparan cuando el turno termina de sonar. */
-  eventos?: Evento[];
-}
-
-export interface Guion {
-  cotizacionId: string;
-  turnos: Turno[];
-}
 
 /** Nombres de las herramientas que el agente en vivo puede llamar. El
     servidor las declara y el navegador las atiende: si cambian aquí, cambian

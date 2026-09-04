@@ -4,9 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Onda from "./Onda";
 import { COTIZACIONES, resumenLineas } from "@/lib/sofi/cotizaciones";
-import { GUIONES } from "@/lib/sofi/guion";
 import { LlamadaEnVivo } from "@/lib/sofi/envivo";
-import { Reproductor, type Motor, type Oyente } from "@/lib/sofi/reproductor";
+import type { Motor, Oyente } from "@/lib/sofi/motor";
 import {
   ACCIONES,
   CAMPOS,
@@ -23,26 +22,28 @@ import {
 /* ─────────────────────────────  SOFI  ─────────────────────────────
    El teléfono de Sofi, en la misma línea sobria del centro de cobros:
    fondo claro, tres tarjetas blancas y una sola tinta. A la izquierda la
-   cola de cotizaciones que nadie convirtió; en el centro la llamada (quién
-   es, la onda, lo que se va diciendo); a la derecha lo que Sofi anota
-   mientras habla y lo que deja agendado al colgar.
+   cola de clientes que pidieron precio y no volvieron; en el centro la
+   llamada (a quién, la onda, lo que se va diciendo); a la derecha lo que
+   Sofi anota mientras habla y lo que deja agendado al colgar.
 
-   La pantalla no sabe si la voz sale del guion grabado o del agente en vivo:
-   los dos motores hablan por la misma interfaz `Oyente`. Los mandos que
-   delatarían la grabación viven detrás de la tecla «a».
+   Aquí no hay demostración enlatada: lo que suena es una llamada de verdad
+   con ElevenLabs y quien contesta es quien esté delante del micrófono. Al
+   colgar, Sofi pasa sola a la siguiente de la lista y vuelve a marcar. Los
+   mandos viven detrás de la tecla «a».
    ------------------------------------------------------------------ */
 
 type Fase = "lista" | "marcando" | "en_llamada" | "colgada";
-type Modo = "auto" | "vivo" | "muestra";
 
 interface Linea {
   quien: Quien;
   texto: string;
-  progreso?: number;
 }
 
-const CLAVE_MODO = "sofi-modo";
 const CLAVE_LLAVE = "sofi-llave-elevenlabs";
+/** Cuánto se queda el resultado en pantalla antes de pasar al siguiente. */
+const MOSTRAR_RESULTADO = 5000;
+/** Y cuánto respira Sofi entre una llamada y la otra. */
+const ENTRE_LLAMADAS = 5;
 
 const estadosIniciales = () =>
   Object.fromEntries(COTIZACIONES.filter((c) => c.cerrada).map((c) => [c.id, c.cerrada as Cierre])) as Record<
@@ -63,20 +64,19 @@ export default function Sofi() {
   const [hablando, setHablando] = useState<Quien | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const [modo, setModo] = useState<Modo>("auto");
   const [servidorConLlave, setServidorConLlave] = useState<boolean | null>(null);
   const [llave, setLlave] = useState("");
   const [timbre, setTimbre] = useState(true);
+  const [encadenar, setEncadenar] = useState(true);
+  const [cuenta, setCuenta] = useState<number | null>(null);
   const [panelOculto, setPanelOculto] = useState(false);
 
   const motorRef = useRef<Motor | null>(null);
   const cierreRef = useRef<Cierre | null>(null);
   const seleccionRef = useRef(seleccion);
   seleccionRef.current = seleccion;
-  const estadosRef = useRef(estados);
-  estadosRef.current = estados;
 
-  const vivoDisponible = servidorConLlave === null ? null : servidorConLlave || llave.trim().length > 0;
+  const hayVoz = servidorConLlave === null ? null : servidorConLlave || llave.trim().length > 0;
 
   const actual = useMemo(() => COTIZACIONES.find((c) => c.id === seleccion)!, [seleccion]);
   const pendientes = useMemo(() => COTIZACIONES.filter((c) => !estados[c.id]), [estados]);
@@ -85,7 +85,14 @@ export default function Sofi() {
   const recuperado = useMemo(() => hechas.reduce((s, c) => s + (estados[c.id].monto ?? 0), 0), [hechas, estados]);
   const recuperadoAnimado = useContador(recuperado);
 
-  /* ── ¿Hay voz en vivo? Se pregunta una vez al abrir. ── */
+  /** La siguiente de la cola después de la que está en pantalla. */
+  const proxima = useMemo(() => {
+    if (!pendientes.length) return null;
+    const i = COTIZACIONES.findIndex((c) => c.id === seleccion);
+    return pendientes.find((c) => COTIZACIONES.indexOf(c) > i) ?? pendientes[0];
+  }, [pendientes, seleccion]);
+
+  /* ── ¿Hay llave para llamar? Se pregunta una vez al abrir. ── */
 
   useEffect(() => {
     fetch("/api/sofi/session")
@@ -93,20 +100,9 @@ export default function Sofi() {
       .then((j: { configurado?: boolean }) => setServidorConLlave(Boolean(j.configurado)))
       .catch(() => setServidorConLlave(false));
     try {
-      const guardado = window.localStorage.getItem(CLAVE_MODO) as Modo | null;
-      if (guardado === "vivo" || guardado === "muestra" || guardado === "auto") setModo(guardado);
       setLlave(window.localStorage.getItem(CLAVE_LLAVE) ?? "");
     } catch {
-      /* sin almacenamiento: se queda en automático */
-    }
-  }, []);
-
-  const elegirModo = useCallback((m: Modo) => {
-    setModo(m);
-    try {
-      window.localStorage.setItem(CLAVE_MODO, m);
-    } catch {
-      /* da igual */
+      /* sin almacenamiento: se pide la llave cada vez */
     }
   }, []);
 
@@ -143,7 +139,7 @@ export default function Sofi() {
   }, [aviso]);
 
   /* ── Colgar: se apunta el resultado y la pantalla se queda en él, con la
-        ficha llena, hasta que quien presenta pasa a la siguiente. ── */
+        ficha llena, hasta que pasa a la siguiente. ── */
 
   const terminar = useCallback(() => {
     motorRef.current = null;
@@ -162,10 +158,11 @@ export default function Sofi() {
     setSegundos(0);
   }, []);
 
-  /** Elegir otra cotización de la cola: borra lo de la anterior. */
+  /** Poner a otra persona en la cabina: borra lo de la anterior. */
   const elegir = useCallback(
     (id: string) => {
       if (motorRef.current) return;
+      setCuenta(null);
       limpiar();
       setSeleccion(id);
       setFase("lista");
@@ -173,23 +170,12 @@ export default function Sofi() {
     [limpiar],
   );
 
-  const siguiente = useCallback(() => {
-    const pend = COTIZACIONES.filter((x) => !estadosRef.current[x.id]);
-    if (!pend.length) return;
-    const i = pend.findIndex((x) => x.id === seleccionRef.current);
-    elegir(pend[(i + 1) % pend.length]?.id ?? pend[0].id);
-  }, [elegir]);
-
-  const proxima = useMemo(() => {
-    const i = pendientes.findIndex((x) => x.id === seleccion);
-    return pendientes[(i + 1) % Math.max(1, pendientes.length)] ?? pendientes[0] ?? null;
-  }, [pendientes, seleccion]);
-
   const llamar = useCallback(async () => {
     if (motorRef.current) return;
     const c = COTIZACIONES.find((x) => x.id === seleccionRef.current);
     if (!c) return;
 
+    setCuenta(null);
     limpiar();
     setAviso(null);
 
@@ -198,7 +184,7 @@ export default function Sofi() {
       onTurno: (t) =>
         setLineas((prev) => {
           const ultimo = prev[prev.length - 1];
-          if (ultimo && ultimo.quien === t.quien && ultimo.texto === t.texto) return [...prev.slice(0, -1), t];
+          if (ultimo && ultimo.quien === t.quien && ultimo.texto === t.texto) return prev;
           return [...prev.slice(-5), t];
         }),
       onEvento: (e) => {
@@ -216,42 +202,52 @@ export default function Sofi() {
       onError: (m) => setAviso(m),
     };
 
-    const guion = GUIONES[c.id];
-    const usarMuestra = modo === "muestra" || (modo === "auto" && !vivoDisponible);
-
-    if (usarMuestra && !guion) {
-      setAviso("La llamada grabada es la de Sancho Paisa. A los demás solo se les puede llamar en vivo.");
-      return;
-    }
-
-    const motor: Motor = usarMuestra
-      ? new Reproductor(guion, oyente, { timbre })
-      : new LlamadaEnVivo(c.id, oyente, servidorConLlave ? undefined : llave.trim());
+    const motor = new LlamadaEnVivo(c.id, oyente, { timbre, llave: servidorConLlave ? undefined : llave.trim() });
     motorRef.current = motor;
     try {
       await motor.iniciar();
     } catch (e) {
       motorRef.current = null;
-      if (!usarMuestra && guion) {
-        // Sin conexión en vivo delante de la cámara: que suene la grabada.
-        setAviso("La voz en vivo no respondió: suena la llamada grabada.");
-        const respaldo = new Reproductor(guion, oyente, { timbre });
-        motorRef.current = respaldo;
-        respaldo.iniciar().catch(() => terminar());
-      } else {
-        setAviso(e instanceof Error ? e.message : String(e));
-        terminar();
-      }
+      setAviso(e instanceof Error ? e.message : String(e));
+      terminar();
     }
-  }, [modo, vivoDisponible, servidorConLlave, llave, timbre, terminar, limpiar]);
+  }, [servidorConLlave, llave, timbre, terminar, limpiar]);
 
   const colgar = useCallback(() => {
     motorRef.current?.colgar();
   }, []);
 
+  const siguiente = useCallback(() => {
+    if (proxima) elegir(proxima.id);
+  }, [proxima, elegir]);
+
+  /* ── Sofi no espera a que le digan: al colgar pasa a la siguiente y
+        vuelve a marcar. Se puede parar en cualquier momento. ── */
+
+  useEffect(() => {
+    if (fase !== "colgada" || !encadenar || !proxima || proxima.id === seleccion) return;
+    const t = setTimeout(() => {
+      elegir(proxima.id);
+      setCuenta(ENTRE_LLAMADAS);
+    }, MOSTRAR_RESULTADO);
+    return () => clearTimeout(t);
+  }, [fase, encadenar, proxima, seleccion, elegir]);
+
+  useEffect(() => {
+    if (cuenta === null) return;
+    if (cuenta <= 0) {
+      setCuenta(null);
+      void llamar();
+      return;
+    }
+    const t = setTimeout(() => setCuenta((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [cuenta, llamar]);
+
   const reiniciar = useCallback(() => {
     motorRef.current?.colgar();
     motorRef.current = null;
+    setCuenta(null);
     setEstados(estadosIniciales());
     limpiar();
     setSeleccion(COTIZACIONES.find((c) => !c.cerrada)!.id);
@@ -275,7 +271,7 @@ export default function Sofi() {
   const reloj = `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
   const estadoLlamada =
     fase === "marcando"
-      ? "Marcando…"
+      ? `Marcando al ${actual.telefono}…`
       : fase === "en_llamada"
         ? hablando === "sofi"
           ? `Sofi hablando · ${reloj}`
@@ -300,7 +296,7 @@ export default function Sofi() {
 
         <div className="sofi-cifras">
           <div className="sofi-cifra">
-            <div className="sofi-cifra-label">Cotizaciones frías</div>
+            <div className="sofi-cifra-label">Por llamar</div>
             <div className="sofi-cifra-valor">{pendientes.length}</div>
           </div>
           <div className="sofi-cifra">
@@ -325,12 +321,12 @@ export default function Sofi() {
         {/* ── La cola ── */}
         <section className="sofi-tarjeta sofi-cola">
           <div className="sofi-tarjeta-cab">
-            <h2>Cotizaciones sin cerrar</h2>
+            <h2>Cotizaron y no volvieron</h2>
             <span className="sofi-cuenta">{pendientes.length}</span>
           </div>
           <div className="sofi-cols">
+            <span>Cliente</span>
             <span>Negocio</span>
-            <span>Contacto</span>
             <span className="der">Cotizado</span>
             <span className="cen">Hace</span>
           </div>
@@ -339,12 +335,14 @@ export default function Sofi() {
               <li key={c.id} className={c.id === seleccion ? "activa" : undefined}>
                 <button type="button" disabled={enCurso} onClick={() => elegir(c.id)}>
                   <span className="sofi-item-negocio">
-                    {c.negocio}
-                    <small>{c.tipo}</small>
+                    {c.contacto}
+                    <small>{c.telefono}</small>
                   </span>
                   <span className="sofi-item-contacto">
-                    {c.contacto}
-                    <small>{c.cargo}</small>
+                    {c.negocio}
+                    <small>
+                      {c.tipo} · {c.barrio}
+                    </small>
                   </span>
                   <span className="sofi-item-total">{pesos(totalCotizacion(c))}</span>
                   <span className="sofi-item-dias">{c.hace} d</span>
@@ -363,7 +361,7 @@ export default function Sofi() {
               return (
                 <li key={c.id}>
                   <span className="sofi-item-negocio">
-                    {c.negocio}
+                    {c.contacto}
                     <small>{estados[c.id].resumen}</small>
                   </span>
                   <span className={`sofi-chip tono-${r.tono}`}>
@@ -393,9 +391,9 @@ export default function Sofi() {
               <Telefono colgar={fase === "colgada"} />
             </div>
 
-            <h3 className="sofi-negocio">{actual.negocio}</h3>
+            <h3 className="sofi-negocio">{actual.contacto}</h3>
             <p className="sofi-contacto">
-              {actual.contacto} · {actual.cargo} · {actual.barrio}
+              {actual.cargo} de {actual.negocio} · {actual.barrio}
             </p>
             <p className="sofi-cotizo">
               Cotizó <strong>{pesos(totalCotizacion(actual))}</strong> {haceTexto(actual.hace)} por{" "}
@@ -407,9 +405,11 @@ export default function Sofi() {
 
             <div className="sofi-subs" aria-live="polite">
               <div className="sofi-subs-hilo">
-                {lineas.length === 0 && fase === "lista" ? (
+                {lineas.length === 0 && fase !== "en_llamada" ? (
                   <p className="sofi-subs-vacio">
-                    Al llamar, aquí se lee lo que van diciendo. La ficha de la derecha se llena sola.
+                    {hayVoz === false
+                      ? "Falta la llave de ElevenLabs: pulsa «a» y pégala para poder llamar."
+                      : "Al llamar, contestas tú por el micrófono. Aquí se lee lo que van diciendo y la ficha de la derecha se llena sola."}
                   </p>
                 ) : null}
                 {lineas.slice(-3).map((l, i, arr) => (
@@ -418,7 +418,7 @@ export default function Sofi() {
                     className={`sofi-sub ${l.quien} ${i === arr.length - 1 ? "actual" : "pasada"}`}
                   >
                     <span className="sofi-sub-quien">{l.quien === "sofi" ? "Sofi" : nombrePila}</span>
-                    <Palabras texto={l.texto} progreso={l.progreso} />
+                    <span className="sofi-sub-texto">{l.texto}</span>
                   </p>
                 ))}
               </div>
@@ -435,14 +435,28 @@ export default function Sofi() {
             ) : null}
 
             <div className="sofi-boton">
-              {fase === "lista" ? (
-                <button type="button" className="sofi-btn sofi-llamar" onClick={llamar} disabled={!pendientes.length}>
+              {cuenta !== null ? (
+                <div className="sofi-cuenta-atras">
+                  <button type="button" className="sofi-btn sofi-llamar" onClick={() => void llamar()}>
+                    Llamando a {actual.trato} en {cuenta}…
+                  </button>
+                  <button type="button" className="sofi-parar" onClick={() => setCuenta(null)}>
+                    Parar
+                  </button>
+                </div>
+              ) : fase === "lista" ? (
+                <button
+                  type="button"
+                  className="sofi-btn sofi-llamar"
+                  onClick={() => void llamar()}
+                  disabled={!pendientes.length || hayVoz === false}
+                >
                   Llamar a {actual.trato}
                 </button>
               ) : fase === "colgada" ? (
                 proxima && proxima.id !== seleccion ? (
                   <button type="button" className="sofi-btn sofi-siguiente" onClick={siguiente}>
-                    Pasar a la siguiente · {proxima.trato}
+                    Pasar a {proxima.trato}
                   </button>
                 ) : (
                   <span className="sofi-colgado">No queda nadie por llamar</span>
@@ -514,22 +528,9 @@ export default function Sofi() {
         <div className="sofi-mandos">
           <div className="sofi-mandos-titulo">Mandos · «a» los oculta</div>
           <div className="sofi-mandos-fila">
-            <button type="button" className={modo === "auto" ? "on" : ""} onClick={() => elegirModo("auto")}>
-              Automático
+            <button type="button" className={encadenar ? "on" : ""} onClick={() => setEncadenar((e) => !e)}>
+              Encadenar llamadas: {encadenar ? "sí" : "no"}
             </button>
-            <button
-              type="button"
-              className={modo === "vivo" ? "on" : ""}
-              disabled={!vivoDisponible}
-              onClick={() => elegirModo("vivo")}
-            >
-              En vivo
-            </button>
-            <button type="button" className={modo === "muestra" ? "on" : ""} onClick={() => elegirModo("muestra")}>
-              Llamada grabada
-            </button>
-          </div>
-          <div className="sofi-mandos-fila">
             <button type="button" onClick={() => setTimbre((t) => !t)}>
               Timbre: {timbre ? "sí" : "no"}
             </button>
@@ -539,7 +540,7 @@ export default function Sofi() {
           </div>
           {servidorConLlave === false ? (
             <label className="sofi-mandos-llave">
-              <span>Llave de ElevenLabs para hablar en vivo (se guarda solo en este navegador)</span>
+              <span>Llave de ElevenLabs (se guarda solo en este navegador)</span>
               <input
                 type="password"
                 value={llave}
@@ -551,13 +552,13 @@ export default function Sofi() {
             </label>
           ) : null}
           <p className="sofi-mandos-nota">
-            {vivoDisponible === null
-              ? "Comprobando la voz en vivo…"
-              : vivoDisponible
+            {hayVoz === null
+              ? "Comprobando la línea…"
+              : hayVoz
                 ? servidorConLlave
-                  ? "Voz en vivo lista (llave del servidor)."
-                  : "Voz en vivo lista con tu llave."
-                : "Sin llave de ElevenLabs: «Llamar» reproduce la llamada grabada."}
+                  ? "Línea lista (llave del servidor). Contestas tú por el micrófono."
+                  : "Línea lista con tu llave. Contestas tú por el micrófono."
+                : "Sin llave de ElevenLabs no hay llamada: pégala aquí arriba."}
           </p>
         </div>
       ) : (
@@ -566,22 +567,6 @@ export default function Sofi() {
         </button>
       )}
     </div>
-  );
-}
-
-/** Las palabras se van encendiendo al ritmo del audio. Sin progreso (en
-    vivo) se muestran todas de una vez. */
-function Palabras({ texto, progreso }: { texto: string; progreso?: number }) {
-  const palabras = texto.split(" ");
-  const visibles = progreso === undefined ? palabras.length : Math.ceil(palabras.length * Math.min(1, progreso));
-  return (
-    <span className="sofi-sub-texto">
-      {palabras.map((p, i) => (
-        <span key={i} className={`sofi-palabra${i < visibles ? " vista" : ""}`}>
-          {p}{" "}
-        </span>
-      ))}
-    </span>
   );
 }
 

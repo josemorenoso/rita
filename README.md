@@ -66,42 +66,38 @@ de entregas — se enseñan las dos cifras con su base, no solo la más vistosa.
 
 ## Sofi, la que llama (`/sofi`)
 
-Es la herramienta de **Sofi Restrepo** (`sls-08`, Ventas). Tiene delante las
-cotizaciones que Distribuidora Andina mandó y nadie convirtió en pedido, llama
-al que las pidió, escucha por qué no compró, ofrece el incentivo que tiene
+Es la herramienta de **Sofi Restrepo** (`sls-08`, Ventas). Delante tiene la
+lista de gente que pidió precio a Distribuidora Andina y nunca contestó: doña
+Marta la de los almuerzos, el del granero, la de las arepas. Pedidos de entre
+cincuenta mil y ochocientos mil pesos, que es lo que compra un negocio de
+barrio cada semana y lo que ningún vendedor alcanza a perseguir uno por uno.
+Sofi los llama, escucha por qué no compraron, ofrece el incentivo que tiene
 autorizado y cuelga con el pedido cerrado o con la siguiente acción agendada.
 Mientras habla, la ficha del cliente se llena sola (por qué no compró, a quién
 le compra hoy, cuánto pide al mes, quién decide…) y la agenda recoge cada
 compromiso con su hora.
 
-**Hay dos maneras de que suene, y la pantalla es la misma para las dos:**
+**La llamada es de verdad.** No hay grabación ni respaldo: «Llamar» timbra,
+abre una conversación de voz con ElevenLabs Conversational AI y quien contesta
+eres tú por el micrófono. Sofi lleva la conversación —cada turno suyo termina
+en una pregunta— y va llamando a sus herramientas (`anotar_dato`,
+`agendar_accion`, `cerrar_llamada`); eso es lo que mueve la pantalla. Al
+colgar, espera unos segundos, pasa sola a la siguiente de la lista y vuelve a
+marcar, hasta que la cola se acabe o la pares.
 
-- **En vivo.** Con una llave de ElevenLabs, «Llamar» abre una conversación
-  de voz real con ElevenLabs Conversational AI: Sofi habla con la voz de una
-  muchacha de Medellín y tú haces de cliente por el micrófono. Ella va
-  llamando a sus herramientas (`anotar_dato`, `agendar_accion`,
-  `cerrar_llamada`) y eso es lo que llena la ficha. La llave puede ir en el
-  servidor (`ELEVENLABS_API_KEY`, en `.env.local` o en Vercel) o pegarla tú
-  en el panel de la tecla «a»: se guarda solo en tu navegador y viaja al
-  servidor en cada llamada para usarse, nunca se almacena. El prompt y la voz
-  están en [`lib/sofi/agente.ts`](./lib/sofi/agente.ts); el agente se crea o
-  se actualiza solo en tu cuenta la primera vez que alguien llama.
-- **Grabada.** La llamada a don Andrés, del Sancho Paisa, está escrita en
-  [`lib/sofi/guion.ts`](./lib/sofi/guion.ts) y su audio vive en
-  `public/sofi/audio/`. Suena idéntica en cada toma, no gasta cuota y no
-  depende de la conexión: es la que conviene para grabar el vídeo. Si no hay
-  llave, o si la voz en vivo falla al arrancar, «Llamar» tira de ella sola.
+La llave puede ir en el servidor (`ELEVENLABS_API_KEY`, en `.env.local` o en
+Vercel) o pegarla tú en el panel de la tecla «a»: se guarda solo en tu
+navegador y viaja al servidor en cada llamada para usarse, nunca se almacena.
+Sin llave no hay llamada. El prompt, la voz y las herramientas están en
+[`lib/sofi/agente.ts`](./lib/sofi/agente.ts); el agente se crea o se actualiza
+solo en tu cuenta la primera vez que alguien llama.
 
-Los mandos (elegir en vivo o grabada, quitar el timbre, reiniciar el día)
-están detrás de la tecla **«a»**, con una pista mínima abajo a la derecha.
-Nada de eso aparece en pantalla mientras narras.
+La voz es **Camila** (`kmcS4vnMNzneqDSErHEd`), colombiana y joven, tranquila y
+segura. Para probar otra, `ELEVENLABS_SOFI_VOICE_ID`.
 
-Para regrabar el audio del guion después de cambiar el texto:
-
-```bash
-npm run sofi:grabar              # solo los turnos que falten
-npm run sofi:grabar -- --forzar  # todos otra vez (≈2.300 caracteres de cuota)
-```
+Los mandos (encadenar llamadas, quitar el timbre, reiniciar el día, pegar la
+llave) están detrás de la tecla **«a»**, con una pista mínima abajo a la
+derecha. Nada de eso aparece en pantalla mientras narras.
 
 ---
 
