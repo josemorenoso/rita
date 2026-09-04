@@ -174,20 +174,28 @@ function configAgente() {
       turn: {
         // Si el cliente se queda callado, Sofi retoma en vez de esperar
         // eternamente; pero le da tiempo a pensar antes de contestar.
-        turn_timeout: 6,
+        turn_timeout: 7,
         mode: "turn",
       },
       tts: {
-        model_id: process.env.ELEVENLABS_SOFI_TTS || "eleven_turbo_v2_5",
-        // Por defecto viene en 3, que recorta calidad para ganar unos ms. En
-        // una llamada narrada se nota más la voz plana que la latencia.
-        optimize_streaming_latency: 2,
+        // v3 conversacional: es el único que admite `expressive_mode`, o sea
+        // que Sofi puede meter etiquetas de emoción ([risas], [warm]) dentro
+        // de lo que dice. En los modelos turbo/flash no existe, y el `style`
+        // del estudio TAMPOCO existe aquí: la API lo acepta y lo tira sin
+        // avisar. Si v3 se pone lento, ELEVENLABS_SOFI_TTS=eleven_turbo_v2_5.
+        model_id: process.env.ELEVENLABS_SOFI_TTS || "eleven_v3_conversational",
+        expressive_mode: true,
+        suggested_audio_tags: [
+          { tag: "warm", description: "Al saludar y al agradecer" },
+          { tag: "excited", description: "Cuando el cliente dice que sí o al cantar el ahorro" },
+          { tag: "laughs", description: "Si el cliente hace un chiste o se ríe" },
+          { tag: "curious", description: "Al preguntar por qué no compró" },
+          { tag: "reassuring", description: "Al resolver una objeción" },
+        ],
         voice_id: process.env.ELEVENLABS_SOFI_VOICE_ID || VOZ_SOFI_POR_DEFECTO,
-        // Poca estabilidad = viva, con inflexiones; y a uno coma doce se le
-        // quita el arrastre que tenía al leer números. Ojo: `style` NO existe
-        // en la configuración del agente de conversación —la API lo descarta
-        // sin avisar—, así que la expresividad sale toda de la estabilidad.
-        stability: 0.33,
+        // En v3 la estabilidad va por tramos: cero es creativa, cero coma
+        // cinco natural, uno plana. Natural es la que no se inventa cosas.
+        stability: 0.5,
         similarity_boost: 0.75,
         speed: 1.12,
       },
