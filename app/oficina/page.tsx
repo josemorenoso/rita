@@ -6,7 +6,7 @@ import AgentPanel from "@/components/AgentPanel";
 import NexusPanel from "@/components/NexusPanel";
 import HeaderBar from "@/components/HeaderBar";
 import LogStream from "@/components/LogStream";
-import { AGENT_COUNT, AUDITOR_ID, LEAD_HUNTER_ID, ROUTE_PLANNER_ID } from "@/lib/roster";
+import { AGENT_COUNT, AUDITOR_ID, LEAD_HUNTER_ID, ROUTE_PLANNER_ID, VOICE_CLOSER_ID } from "@/lib/roster";
 import type { Snapshot } from "@/lib/types";
 
 export default function Page() {
@@ -51,6 +51,7 @@ export default function Page() {
               huntHref={selectedAgent.def.id === LEAD_HUNTER_ID ? "/" : undefined}
               routeHref={selectedAgent.def.id === ROUTE_PLANNER_ID ? "/rutas" : undefined}
               auditHref={selectedAgent.def.id === AUDITOR_ID ? "/lupa" : undefined}
+              callHref={selectedAgent.def.id === VOICE_CLOSER_ID ? "/sofi" : undefined}
             />
           ) : snap ? (
             <NexusPanel snap={snap} onClose={() => setSelection({ kind: "nexus" })} />

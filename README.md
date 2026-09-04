@@ -9,7 +9,9 @@ descargar en Excel y empezar a llamar.
 | `/` | La herramienta. Es lo que compartes. |
 | `/leads` | Búsquedas anteriores de ese visitante (guardadas en su navegador). |
 | `/rutas` | El reparto del día: 40 pedidos, 6 domiciliarios y la ruta de cada uno sobre el mapa de Medellín. |
-| `/oficina` | La simulación AIOS de 26 agentes. Tu demo, no forma parte del regalo. |
+| `/lupa` | El auditor de fugas financieras de Ruth Alcaraz: 31 reglas sobre las exportaciones del ERP. |
+| `/sofi` | El teléfono de Sofi: llama a quien cotizó y nunca compró, cierra el pedido y llena la ficha. |
+| `/oficina` | La simulación AIOS de 27 agentes. Tu demo, no forma parte del regalo. |
 
 ---
 
@@ -59,6 +61,44 @@ ya agrupa por sectores y atiende los express primero, porque consigue la misma
 puntualidad: ahí el ahorro es de un 29 % en kilómetros. Frente a repartir por
 orden de llegada el ahorro sube al 54 %, pero ese plan llega tarde a 404 minutos
 de entregas — se enseñan las dos cifras con su base, no solo la más vistosa.
+
+---
+
+## Sofi, la que llama (`/sofi`)
+
+Es la herramienta de **Sofi Restrepo** (`sls-08`, Ventas). Tiene delante las
+cotizaciones que Distribuidora Andina mandó y nadie convirtió en pedido, llama
+al que las pidió, escucha por qué no compró, ofrece el incentivo que tiene
+autorizado y cuelga con el pedido cerrado o con la siguiente acción agendada.
+Mientras habla, la ficha del cliente se llena sola (por qué no compró, a quién
+le compra hoy, cuánto pide al mes, quién decide…) y la agenda recoge cada
+compromiso con su hora.
+
+**Hay dos maneras de que suene, y la pantalla es la misma para las dos:**
+
+- **En vivo.** Con `ELEVENLABS_API_KEY` en `.env.local`, «Llamar» abre una
+  conversación de voz real con ElevenLabs Conversational AI: Sofi habla con la
+  voz de una muchacha de Medellín y tú haces de cliente por el micrófono. Ella
+  va llamando a sus herramientas (`anotar_dato`, `agendar_accion`,
+  `cerrar_llamada`) y eso es lo que llena la ficha. El prompt y la voz están
+  en [`lib/sofi/agente.ts`](./lib/sofi/agente.ts); el agente se crea o se
+  actualiza solo en tu cuenta la primera vez que alguien llama.
+- **Grabada.** La llamada a don Andrés, del Sancho Paisa, está escrita en
+  [`lib/sofi/guion.ts`](./lib/sofi/guion.ts) y su audio vive en
+  `public/sofi/audio/`. Suena idéntica en cada toma, no gasta cuota y no
+  depende de la conexión: es la que conviene para grabar el vídeo. Si no hay
+  llave, o si la voz en vivo falla al arrancar, «Llamar» tira de ella sola.
+
+Los mandos (elegir en vivo o grabada, quitar el timbre, reiniciar el día)
+están detrás de la tecla **«a»**, con una pista mínima abajo a la derecha.
+Nada de eso aparece en pantalla mientras narras.
+
+Para regrabar el audio del guion después de cambiar el texto:
+
+```bash
+npm run sofi:grabar              # solo los turnos que falten
+npm run sofi:grabar -- --forzar  # todos otra vez (≈2.300 caracteres de cuota)
+```
 
 ---
 

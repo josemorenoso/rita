@@ -20,6 +20,7 @@ export default function AgentPanel({
   huntHref,
   routeHref,
   auditHref,
+  callHref,
 }: {
   agent: AgentState;
   onClose: () => void;
@@ -29,6 +30,8 @@ export default function AgentPanel({
   routeHref?: string;
   /** Solo lo recibe la agente que audita las cuentas de verdad. */
   auditHref?: string;
+  /** Solo lo recibe la agente que llama por teléfono de verdad. */
+  callHref?: string;
 }) {
   const d = agent.def;
   const dept = DEPT_BY_ID[d.dept];
@@ -89,6 +92,18 @@ export default function AgentPanel({
           </Link>
           <p>
             Lee las exportaciones del ERP y devuelve, con la fila exacta delante, dónde se está yendo el dinero.
+          </p>
+        </section>
+      )}
+
+      {callHref && (
+        <section className="panel-hunt">
+          <Link className="hunt-cta" href={callHref}>
+            ▶ Ver a Sofi llamar
+          </Link>
+          <p>
+            Llama a quien pidió una cotización y nunca compró. Cuelga con el pedido cerrado y la ficha del cliente
+            llena.
           </p>
         </section>
       )}

@@ -468,6 +468,37 @@ export const ROSTER: AgentDef[] = [
     ],
   },
 
+  {
+    id: "sls-08",
+    name: "Sofi Restrepo",
+    role: "Recupera cotizaciones por teléfono",
+    dept: "ventas",
+    bio: "Llama a quien pidió una cotización y nunca compró. Escucha por qué, ofrece el incentivo que tiene autorizado y cuelga con el pedido cerrado o con la siguiente acción agendada. Mientras habla, va llenando la ficha del cliente sola: por qué no compró, a quién le compra hoy, cuánto pide al mes.",
+    model: "opus-5",
+    tools: ["ElevenLabs", "Twilio", "WhatsApp", "HubSpot", "Google Calendar"],
+    tasks: [
+      "Llamando a las 10 cotizaciones sin respuesta de esta semana",
+      "Anotando por qué Sancho Paisa no cerró la de aceite y arroz",
+      "Ofreciendo el 10 % autorizado a los que cotizaron y no compraron",
+      "Agendando el despacho del viernes y la llamada del martes",
+      "Detectando qué compran a otro proveedor para ofrecerlo",
+    ],
+    palette: P(HAIR[1], SKIN[1], "#F5F7FF", "#2E9F63", "#161C33", "#3FE38A"),
+    deployedDays: 1,
+    baseRuns: 63,
+    baseHours: 3.8,
+    cadence: 14,
+    successRate: 96.4,
+    avgRuntime: 112,
+    valuePerRun: 410,
+    savedPerRun: 0.6,
+    skills: [
+      { label: "Persuasión", value: 96 },
+      { label: "Escucha", value: 93 },
+      { label: "Cierre", value: 91 },
+    ],
+  },
+
   // ───────────────────────────  CONTABILIDAD  ───────────────────────────
   {
     id: "fin-01",
@@ -814,6 +845,9 @@ export const ROUTE_PLANNER_ID = "log-01";
 
 /** La que audita las cuentas de verdad: su herramienta es LUPA. */
 export const AUDITOR_ID = "fin-05";
+
+/** La que llama por teléfono de verdad: Sofi, con voz de ElevenLabs. */
+export const VOICE_CLOSER_ID = "sls-08";
 
 export const AGENTS_BY_DEPT = {
   marketing: ROSTER.filter((a) => a.dept === "marketing"),
