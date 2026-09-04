@@ -21,10 +21,12 @@ const EMPRESA = "Distribuidora Andina";
     b2htR0pMe28pYwCY9gnP y «Paisa ventas» JcWDFG8DiES2OzGhZJUJ. */
 export const VOZ_SOFI_POR_DEFECTO = "J4vZAFDEcpenkMp3f3R9";
 
-const llave = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
-export const configurado = () => Boolean(llave());
+/** La llave del servidor, si la hay. Si no, cada visitante puede traer la
+    suya en el cuerpo de la petición (se guarda solo en su navegador). */
+export const llaveDelServidor = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
+export const configurado = () => Boolean(llaveDelServidor());
 
-const cabeceras = () => ({ "xi-api-key": llave(), "Content-Type": "application/json" });
+const cabeceras = (llave: string) => ({ "xi-api-key": llave, "Content-Type": "application/json" });
 
 /* ── El prompt ── */
 
@@ -157,53 +159,57 @@ function configAgente() {
   };
 }
 
-/* ── Crear o actualizar el agente, una vez por proceso ── */
+/* ── Crear o actualizar el agente, una vez por proceso y por llave ── */
 
-let agentePromesa: Promise<string> | null = null;
+const agentes = new Map<string, Promise<string>>();
 
-async function buscarAgente(): Promise<string | null> {
+async function buscarAgente(llave: string): Promise<string | null> {
   const r = await fetch(`${EL}/v1/convai/agents?search=${encodeURIComponent("Sofi")}&page_size=20`, {
-    headers: cabeceras(),
+    headers: cabeceras(llave),
   });
   if (!r.ok) return null;
   const j = (await r.json()) as { agents?: { agent_id: string; name: string }[] };
   return j.agents?.find((a) => a.name === NOMBRE_AGENTE)?.agent_id ?? null;
 }
 
-async function asegurar(): Promise<string> {
+async function asegurar(llave: string): Promise<string> {
   const fijado = process.env.ELEVENLABS_SOFI_AGENT_ID?.trim();
-  const existente = fijado || (await buscarAgente());
+  const existente = fijado || (await buscarAgente(llave));
   const cuerpo = JSON.stringify(configAgente());
+  const h = cabeceras(llave);
 
   if (existente) {
-    const r = await fetch(`${EL}/v1/convai/agents/${existente}`, { method: "PATCH", headers: cabeceras(), body: cuerpo });
+    const r = await fetch(`${EL}/v1/convai/agents/${existente}`, { method: "PATCH", headers: h, body: cuerpo });
     if (!r.ok) throw new Error(`actualizar agente: ${r.status} ${(await r.text()).slice(0, 300)}`);
     return existente;
   }
 
-  const r = await fetch(`${EL}/v1/convai/agents/create`, { method: "POST", headers: cabeceras(), body: cuerpo });
+  const r = await fetch(`${EL}/v1/convai/agents/create`, { method: "POST", headers: h, body: cuerpo });
   if (!r.ok) throw new Error(`crear agente: ${r.status} ${(await r.text()).slice(0, 300)}`);
   return ((await r.json()) as { agent_id: string }).agent_id;
 }
 
-export function asegurarAgente() {
-  if (!agentePromesa) {
-    agentePromesa = asegurar().catch((e) => {
-      agentePromesa = null;
+export function asegurarAgente(llave: string) {
+  let p = agentes.get(llave);
+  if (!p) {
+    p = asegurar(llave).catch((e) => {
+      agentes.delete(llave);
       throw e;
     });
+    agentes.set(llave, p);
   }
-  return agentePromesa;
+  return p;
 }
 
 /** Token efímero para WebRTC. Si no lo dan, cae a la URL firmada (WebSocket). */
-export async function abrirSesion(agentId: string) {
-  const t = await fetch(`${EL}/v1/convai/conversation/token?agent_id=${agentId}`, { headers: cabeceras() });
+export async function abrirSesion(llave: string, agentId: string) {
+  const h = cabeceras(llave);
+  const t = await fetch(`${EL}/v1/convai/conversation/token?agent_id=${agentId}`, { headers: h });
   if (t.ok) {
     const token = ((await t.json()) as { token?: string }).token;
     if (token) return { modo: "webrtc" as const, token };
   }
-  const s = await fetch(`${EL}/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: cabeceras() });
+  const s = await fetch(`${EL}/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: h });
   if (!s.ok) throw new Error(`sesión rechazada: ${s.status} ${(await s.text()).slice(0, 300)}`);
   return { modo: "websocket" as const, signedUrl: ((await s.json()) as { signed_url: string }).signed_url };
 }

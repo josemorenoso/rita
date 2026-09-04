@@ -2,20 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import AgentAvatar from "@/components/AgentAvatar";
 import Onda from "./Onda";
 import { COTIZACIONES, resumenLineas } from "@/lib/sofi/cotizaciones";
 import { GUIONES } from "@/lib/sofi/guion";
 import { LlamadaEnVivo } from "@/lib/sofi/envivo";
 import { Reproductor, type Motor, type Oyente } from "@/lib/sofi/reproductor";
-import { ROSTER, VOICE_CLOSER_ID } from "@/lib/roster";
 import {
   ACCIONES,
   CAMPOS,
   RESULTADOS,
   haceTexto,
   pesos,
-  pesosCortos,
   totalCotizacion,
   type Accion,
   type Campo,
@@ -24,14 +21,15 @@ import {
 } from "@/lib/sofi/tipos";
 
 /* ─────────────────────────────  SOFI  ─────────────────────────────
-   El teléfono de Sofi. A la izquierda la cola de cotizaciones que nadie
-   convirtió; en el centro la llamada (quién es, la onda, lo que se va
-   diciendo); a la derecha lo que Sofi anota mientras habla y lo que deja
-   agendado al colgar.
+   El teléfono de Sofi, en la misma línea sobria del centro de cobros:
+   fondo claro, tres tarjetas blancas y una sola tinta. A la izquierda la
+   cola de cotizaciones que nadie convirtió; en el centro la llamada (quién
+   es, la onda, lo que se va diciendo); a la derecha lo que Sofi anota
+   mientras habla y lo que deja agendado al colgar.
 
    La pantalla no sabe si la voz sale del guion grabado o del agente en vivo:
-   los dos motores hablan por la misma interfaz `Oyente`. Y como en LUPA, los
-   mandos que delatarían la grabación viven detrás de la tecla «a».
+   los dos motores hablan por la misma interfaz `Oyente`. Los mandos que
+   delatarían la grabación viven detrás de la tecla «a».
    ------------------------------------------------------------------ */
 
 type Fase = "lista" | "marcando" | "en_llamada" | "colgada";
@@ -44,14 +42,13 @@ interface Linea {
 }
 
 const CLAVE_MODO = "sofi-modo";
+const CLAVE_LLAVE = "sofi-llave-elevenlabs";
 
 const estadosIniciales = () =>
   Object.fromEntries(COTIZACIONES.filter((c) => c.cerrada).map((c) => [c.id, c.cerrada as Cierre])) as Record<
     string,
     Cierre
   >;
-
-const SOFI = ROSTER.find((a) => a.id === VOICE_CLOSER_ID)!;
 
 export default function Sofi() {
   const [estados, setEstados] = useState<Record<string, Cierre>>(estadosIniciales);
@@ -67,7 +64,8 @@ export default function Sofi() {
   const [aviso, setAviso] = useState<string | null>(null);
 
   const [modo, setModo] = useState<Modo>("auto");
-  const [vivoDisponible, setVivoDisponible] = useState<boolean | null>(null);
+  const [servidorConLlave, setServidorConLlave] = useState<boolean | null>(null);
+  const [llave, setLlave] = useState("");
   const [timbre, setTimbre] = useState(true);
   const [panelOculto, setPanelOculto] = useState(false);
 
@@ -77,6 +75,8 @@ export default function Sofi() {
   seleccionRef.current = seleccion;
   const estadosRef = useRef(estados);
   estadosRef.current = estados;
+
+  const vivoDisponible = servidorConLlave === null ? null : servidorConLlave || llave.trim().length > 0;
 
   const actual = useMemo(() => COTIZACIONES.find((c) => c.id === seleccion)!, [seleccion]);
   const pendientes = useMemo(() => COTIZACIONES.filter((c) => !estados[c.id]), [estados]);
@@ -90,11 +90,12 @@ export default function Sofi() {
   useEffect(() => {
     fetch("/api/sofi/session")
       .then((r) => r.json())
-      .then((j: { configurado?: boolean }) => setVivoDisponible(Boolean(j.configurado)))
-      .catch(() => setVivoDisponible(false));
+      .then((j: { configurado?: boolean }) => setServidorConLlave(Boolean(j.configurado)))
+      .catch(() => setServidorConLlave(false));
     try {
       const guardado = window.localStorage.getItem(CLAVE_MODO) as Modo | null;
       if (guardado === "vivo" || guardado === "muestra" || guardado === "auto") setModo(guardado);
+      setLlave(window.localStorage.getItem(CLAVE_LLAVE) ?? "");
     } catch {
       /* sin almacenamiento: se queda en automático */
     }
@@ -104,6 +105,16 @@ export default function Sofi() {
     setModo(m);
     try {
       window.localStorage.setItem(CLAVE_MODO, m);
+    } catch {
+      /* da igual */
+    }
+  }, []);
+
+  const guardarLlave = useCallback((v: string) => {
+    setLlave(v);
+    try {
+      if (v.trim()) window.localStorage.setItem(CLAVE_LLAVE, v.trim());
+      else window.localStorage.removeItem(CLAVE_LLAVE);
     } catch {
       /* da igual */
     }
@@ -213,7 +224,9 @@ export default function Sofi() {
       return;
     }
 
-    const motor: Motor = usarMuestra ? new Reproductor(guion, oyente, { timbre }) : new LlamadaEnVivo(c.id, oyente);
+    const motor: Motor = usarMuestra
+      ? new Reproductor(guion, oyente, { timbre })
+      : new LlamadaEnVivo(c.id, oyente, servidorConLlave ? undefined : llave.trim());
     motorRef.current = motor;
     try {
       await motor.iniciar();
@@ -230,7 +243,7 @@ export default function Sofi() {
         terminar();
       }
     }
-  }, [modo, vivoDisponible, timbre, terminar, limpiar]);
+  }, [modo, vivoDisponible, servidorConLlave, llave, timbre, terminar, limpiar]);
 
   const colgar = useCallback(() => {
     motorRef.current?.colgar();
@@ -260,18 +273,16 @@ export default function Sofi() {
   const frecuencias = useCallback(() => motorRef.current?.frecuencias() ?? null, []);
 
   const reloj = `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
-  const estadoTexto =
+  const estadoLlamada =
     fase === "marcando"
-      ? "marcando…"
+      ? "Marcando…"
       : fase === "en_llamada"
         ? hablando === "sofi"
-          ? `hablando · ${reloj}`
-          : `escuchando · ${reloj}`
+          ? `Sofi hablando · ${reloj}`
+          : `Escuchando · ${reloj}`
         : fase === "colgada"
-          ? `colgó · ${reloj}`
-          : pendientes.length
-            ? "lista para llamar"
-            : "no queda nadie por llamar";
+          ? `Llamada terminada · ${reloj}`
+          : "Lista para llamar";
 
   const nombrePila = actual.contacto.split(" ")[0];
   const enCurso = fase === "marcando" || fase === "en_llamada";
@@ -280,75 +291,82 @@ export default function Sofi() {
     <div className={`sofi fase-${fase}`}>
       <header className="sofi-top">
         <div className="sofi-marca">
-          <h1>SOFI</h1>
-          <p className="sofi-tagline">
-            Llama a quien pidió una cotización y nunca compró. Cuelga con el pedido cerrado y la ficha del cliente
-            llena.
-          </p>
+          <div className="sofi-logo">DA</div>
+          <div>
+            <div className="sofi-marca-nombre">Distribuidora Andina</div>
+            <div className="sofi-marca-sub">Sofi · Recuperación de cotizaciones</div>
+          </div>
         </div>
 
         <div className="sofi-cifras">
           <div className="sofi-cifra">
-            <span className="panel-label">Cotizaciones frías</span>
-            <strong>{pendientes.length}</strong>
-            <span className="sofi-cifra-pie">{pesosCortos(sinCerrar)} sin cerrar</span>
+            <div className="sofi-cifra-label">Cotizaciones frías</div>
+            <div className="sofi-cifra-valor">{pendientes.length}</div>
           </div>
-          <div className="sofi-cifra sofi-cifra-plata">
-            <span className="panel-label">Recuperado hoy</span>
-            <strong>{pesos(recuperadoAnimado)}</strong>
-            <span className="sofi-cifra-pie">
-              {hechas.length} {hechas.length === 1 ? "llamada" : "llamadas"}
-            </span>
+          <div className="sofi-cifra">
+            <div className="sofi-cifra-label">Sin cerrar</div>
+            <div className="sofi-cifra-valor">{pesos(sinCerrar)}</div>
           </div>
-          <div className="sofi-cifra sofi-cifra-estado">
-            <span className="panel-label">Sofi</span>
-            <strong>
-              <i className="dot" /> {estadoTexto}
-            </strong>
-            <span className="sofi-cifra-pie">Distribuidora Andina · Medellín</span>
+          <div className="sofi-cifra">
+            <div className="sofi-cifra-label">Recuperado hoy</div>
+            <div className="sofi-cifra-valor sofi-cifra-plata">{pesos(recuperadoAnimado)}</div>
           </div>
-        </div>
-
-        <div className="sofi-firma">
-          <span className="panel-label">Agente</span>
-          <strong>{SOFI.name}</strong>
-          <Link href="/oficina">Ventas ↗</Link>
+          <div className="sofi-cifra">
+            <div className="sofi-cifra-label">Llamadas</div>
+            <div className="sofi-cifra-valor">{hechas.length}</div>
+          </div>
+          <div className="sofi-vivo">
+            <span className={`sofi-punto${enCurso ? " activo" : ""}`} /> {enCurso ? "En llamada" : "En línea"}
+          </div>
         </div>
       </header>
 
-      <main className="sofi-stage">
+      <main className="sofi-main">
         {/* ── La cola ── */}
-        <aside className="sofi-cola">
-          <div className="sofi-cola-cab">
-            <h3>Sin cerrar</h3>
-            <span>{pendientes.length}</span>
+        <section className="sofi-tarjeta sofi-cola">
+          <div className="sofi-tarjeta-cab">
+            <h2>Cotizaciones sin cerrar</h2>
+            <span className="sofi-cuenta">{pendientes.length}</span>
+          </div>
+          <div className="sofi-cols">
+            <span>Negocio</span>
+            <span>Contacto</span>
+            <span className="der">Cotizado</span>
+            <span className="cen">Hace</span>
           </div>
           <ul className="sofi-lista">
             {pendientes.map((c) => (
               <li key={c.id} className={c.id === seleccion ? "activa" : undefined}>
                 <button type="button" disabled={enCurso} onClick={() => elegir(c.id)}>
-                  <span className="sofi-item-negocio">{c.negocio}</span>
-                  <span className="sofi-item-meta">
-                    {c.contacto} · {c.hace} días
+                  <span className="sofi-item-negocio">
+                    {c.negocio}
+                    <small>{c.tipo}</small>
+                  </span>
+                  <span className="sofi-item-contacto">
+                    {c.contacto}
+                    <small>{c.cargo}</small>
                   </span>
                   <span className="sofi-item-total">{pesos(totalCotizacion(c))}</span>
-                  {GUIONES[c.id] && c.id === seleccion && enCurso && <i className="sofi-item-punto" />}
+                  <span className="sofi-item-dias">{c.hace} d</span>
                 </button>
               </li>
             ))}
           </ul>
 
-          <div className="sofi-cola-cab sofi-cola-cab-hechas">
-            <h3>Llamadas hoy</h3>
-            <span>{hechas.length}</span>
+          <div className="sofi-tarjeta-cab sofi-cab-hechas">
+            <h2>Llamadas de hoy</h2>
+            <span className="sofi-cuenta">{hechas.length}</span>
           </div>
-          <ul className="sofi-lista sofi-lista-hechas">
+          <ul className="sofi-lista sofi-hechas">
             {hechas.map((c) => {
               const r = RESULTADOS[estados[c.id].resultado];
               return (
-                <li key={c.id} className={`tono-${r.tono}`}>
-                  <span className="sofi-item-negocio">{c.negocio}</span>
-                  <span className="sofi-item-chip">
+                <li key={c.id}>
+                  <span className="sofi-item-negocio">
+                    {c.negocio}
+                    <small>{estados[c.id].resumen}</small>
+                  </span>
+                  <span className={`sofi-chip tono-${r.tono}`}>
                     {r.etiqueta}
                     {estados[c.id].monto ? ` · ${pesos(estados[c.id].monto!)}` : ""}
                   </span>
@@ -356,59 +374,54 @@ export default function Sofi() {
               );
             })}
           </ul>
-        </aside>
+        </section>
 
         {/* ── La llamada ── */}
-        <section className="sofi-llamada">
-          <div className="sofi-sofi">
-            <AgentAvatar
-              palette={SOFI.palette}
-              mode={fase === "en_llamada" ? (hablando === "sofi" ? "sync" : "think") : "work"}
-              size={58}
-            />
-            <div className="sofi-sofi-texto">
-              <strong>Sofi</strong>
-              <span className={`sofi-sofi-estado ${fase}`}>
-                <i className="dot" />
-                {estadoTexto}
-              </span>
-            </div>
+        <section className="sofi-tarjeta sofi-llamada">
+          <div className="sofi-tarjeta-cab">
+            <h2>Cabina de llamada</h2>
+            <span className="sofi-agente">Agente · Sofi</span>
           </div>
 
           <div className="sofi-centro">
-            <div className="sofi-quien">
-              <h2>{actual.negocio}</h2>
-              <p className="sofi-contacto">
-                {actual.contacto}, {actual.cargo.toLowerCase()} · {actual.barrio}
-              </p>
-              <p className="sofi-cotizo">
-                <strong>{pesos(totalCotizacion(actual))}</strong> cotizados {haceTexto(actual.hace)} por{" "}
-                {actual.canal === "Llamada" ? "teléfono" : actual.canal}. No volvió a escribir.
-              </p>
-              <p className="sofi-lineas">{resumenLineas(actual)}</p>
+            <div className="sofi-estado">{estadoLlamada}</div>
+
+            <div className={`sofi-telefono ${fase}`}>
+              <span className="sofi-anillo" />
+              <span className="sofi-anillo a2" />
+              <span className="sofi-anillo a3" />
+              <Telefono colgar={fase === "colgada"} />
             </div>
 
-            <Onda frecuencias={frecuencias} activa={fase === "en_llamada"} />
+            <h3 className="sofi-negocio">{actual.negocio}</h3>
+            <p className="sofi-contacto">
+              {actual.contacto} · {actual.cargo} · {actual.barrio}
+            </p>
+            <p className="sofi-cotizo">
+              Cotizó <strong>{pesos(totalCotizacion(actual))}</strong> {haceTexto(actual.hace)} por{" "}
+              {actual.canal === "Llamada" ? "teléfono" : actual.canal} y no volvió a escribir.
+            </p>
+            <p className="sofi-lineas">{resumenLineas(actual)}</p>
+
+            <Onda frecuencias={frecuencias} activa={fase === "en_llamada"} color="#111111" colorReposo="#d9d9de" />
 
             <div className="sofi-subs" aria-live="polite">
-              {lineas.length === 0 ? (
-                <p className="sofi-subs-vacio">
-                  {fase === "marcando"
-                    ? "Timbrando…"
-                    : fase === "lista"
-                      ? "Al llamar, aquí se lee lo que van diciendo. La ficha de la derecha se llena sola."
-                      : ""}
-                </p>
-              ) : null}
-              {lineas.slice(-3).map((l, i, arr) => (
-                <p
-                  key={`${arr.length - i}-${l.texto.slice(0, 24)}`}
-                  className={`sofi-sub ${l.quien} ${i === arr.length - 1 ? "actual" : "pasada"}`}
-                >
-                  <span className="sofi-sub-quien">{l.quien === "sofi" ? "Sofi" : nombrePila}</span>
-                  <Palabras texto={l.texto} progreso={l.progreso} />
-                </p>
-              ))}
+              <div className="sofi-subs-hilo">
+                {lineas.length === 0 && fase === "lista" ? (
+                  <p className="sofi-subs-vacio">
+                    Al llamar, aquí se lee lo que van diciendo. La ficha de la derecha se llena sola.
+                  </p>
+                ) : null}
+                {lineas.slice(-3).map((l, i, arr) => (
+                  <p
+                    key={`${arr.length - i}-${l.texto.slice(0, 24)}`}
+                    className={`sofi-sub ${l.quien} ${i === arr.length - 1 ? "actual" : "pasada"}`}
+                  >
+                    <span className="sofi-sub-quien">{l.quien === "sofi" ? "Sofi" : nombrePila}</span>
+                    <Palabras texto={l.texto} progreso={l.progreso} />
+                  </p>
+                ))}
+              </div>
             </div>
 
             {fase === "colgada" && cierre ? (
@@ -423,20 +436,20 @@ export default function Sofi() {
 
             <div className="sofi-boton">
               {fase === "lista" ? (
-                <button type="button" className="sofi-llamar" onClick={llamar} disabled={!pendientes.length}>
-                  <Telefono /> Llamar a {actual.trato}
+                <button type="button" className="sofi-btn sofi-llamar" onClick={llamar} disabled={!pendientes.length}>
+                  Llamar a {actual.trato}
                 </button>
               ) : fase === "colgada" ? (
                 proxima && proxima.id !== seleccion ? (
-                  <button type="button" className="sofi-siguiente" onClick={siguiente}>
+                  <button type="button" className="sofi-btn sofi-siguiente" onClick={siguiente}>
                     Pasar a la siguiente · {proxima.trato}
                   </button>
                 ) : (
                   <span className="sofi-colgado">No queda nadie por llamar</span>
                 )
               ) : (
-                <button type="button" className="sofi-colgar" onClick={colgar}>
-                  <Telefono colgar /> Colgar
+                <button type="button" className="sofi-btn sofi-colgar" onClick={colgar}>
+                  Colgar
                 </button>
               )}
             </div>
@@ -444,44 +457,51 @@ export default function Sofi() {
         </section>
 
         {/* ── La ficha ── */}
-        <aside className="sofi-ficha">
-          <section className="sofi-bloque">
-            <h3>Lo que Sofi va anotando</h3>
-            <dl className="sofi-campos">
-              {CAMPOS.map((cmp) => {
-                const valor = ficha[cmp.id];
-                return (
-                  <div
-                    key={cmp.id}
-                    className={`sofi-campo${valor ? " lleno" : ""}${recien === cmp.id ? " recien" : ""}`}
-                  >
-                    <dt>{cmp.titulo}</dt>
-                    <dd>{valor ?? <span className="sofi-vacio">—</span>}</dd>
-                  </div>
-                );
-              })}
-            </dl>
-          </section>
+        <section className="sofi-tarjeta sofi-ficha">
+          <div className="sofi-tarjeta-cab">
+            <h2>Lo que Sofi va anotando</h2>
+            <span className="sofi-cuenta">
+              {Object.keys(ficha).length}/{CAMPOS.length}
+            </span>
+          </div>
+          <dl className="sofi-campos">
+            {CAMPOS.map((cmp) => {
+              const valor = ficha[cmp.id];
+              return (
+                <div
+                  key={cmp.id}
+                  className={`sofi-campo${valor ? " lleno" : ""}${recien === cmp.id ? " recien" : ""}`}
+                >
+                  <dt>{cmp.titulo}</dt>
+                  <dd>{valor ?? <span className="sofi-vacio">—</span>}</dd>
+                </div>
+              );
+            })}
+          </dl>
 
-          <section className="sofi-bloque">
-            <h3>Queda agendado</h3>
-            {acciones.length === 0 ? (
-              <p className="sofi-ficha-vacio">
-                {enCurso ? "Se va llenando mientras hablan." : "Cada compromiso de la llamada aparece aquí con su hora."}
-              </p>
-            ) : (
-              <ol className="sofi-acciones">
-                {acciones.map((a, i) => (
-                  <li key={`${a.tipo}-${i}`} className={`sofi-accion tipo-${a.tipo}`}>
-                    <span className="sofi-accion-tipo">{ACCIONES[a.tipo]}</span>
-                    <span className="sofi-accion-cuando">{a.cuando}</span>
-                    <span className="sofi-accion-detalle">{a.detalle}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-        </aside>
+          <div className="sofi-tarjeta-cab sofi-cab-agenda">
+            <h2>Queda agendado</h2>
+            <span className="sofi-cuenta">{acciones.length}</span>
+          </div>
+          {acciones.length === 0 ? (
+            <p className="sofi-ficha-vacio">
+              {enCurso ? "Se va llenando mientras hablan." : "Cada compromiso de la llamada aparece aquí con su hora."}
+            </p>
+          ) : (
+            <ol className="sofi-acciones">
+              {acciones.map((a, i) => (
+                <li key={`${a.tipo}-${i}`} className={`sofi-accion tipo-${a.tipo}`}>
+                  <span className="sofi-accion-tipo">{ACCIONES[a.tipo]}</span>
+                  <span className="sofi-accion-cuando">{a.cuando}</span>
+                  <span className="sofi-accion-detalle">{a.detalle}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <Link className="sofi-oficina" href="/oficina">
+            Ver a Sofi en la oficina
+          </Link>
+        </section>
       </main>
 
       {aviso && (
@@ -492,7 +512,7 @@ export default function Sofi() {
 
       {panelOculto ? (
         <div className="sofi-mandos">
-          <span className="panel-label">Mandos · «a» los oculta</span>
+          <div className="sofi-mandos-titulo">Mandos · «a» los oculta</div>
           <div className="sofi-mandos-fila">
             <button type="button" className={modo === "auto" ? "on" : ""} onClick={() => elegirModo("auto")}>
               Automático
@@ -517,12 +537,27 @@ export default function Sofi() {
               Reiniciar el día
             </button>
           </div>
+          {servidorConLlave === false ? (
+            <label className="sofi-mandos-llave">
+              <span>Llave de ElevenLabs para hablar en vivo (se guarda solo en este navegador)</span>
+              <input
+                type="password"
+                value={llave}
+                placeholder="sk_…"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => guardarLlave(e.target.value)}
+              />
+            </label>
+          ) : null}
           <p className="sofi-mandos-nota">
             {vivoDisponible === null
-              ? "comprobando la voz en vivo…"
+              ? "Comprobando la voz en vivo…"
               : vivoDisponible
-                ? "voz en vivo lista (ElevenLabs)"
-                : "sin llave de ElevenLabs: solo la llamada grabada"}
+                ? servidorConLlave
+                  ? "Voz en vivo lista (llave del servidor)."
+                  : "Voz en vivo lista con tu llave."
+                : "Sin llave de ElevenLabs: «Llamar» reproduce la llamada grabada."}
           </p>
         </div>
       ) : (
@@ -553,12 +588,13 @@ function Palabras({ texto, progreso }: { texto: string; progreso?: number }) {
 function Telefono({ colgar }: { colgar?: boolean }) {
   return (
     <svg
+      className="sofi-telefono-icono"
       viewBox="0 0 24 24"
-      width="16"
-      height="16"
+      width="30"
+      height="30"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

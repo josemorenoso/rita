@@ -76,13 +76,16 @@ compromiso con su hora.
 
 **Hay dos maneras de que suene, y la pantalla es la misma para las dos:**
 
-- **En vivo.** Con `ELEVENLABS_API_KEY` en `.env.local`, «Llamar» abre una
-  conversación de voz real con ElevenLabs Conversational AI: Sofi habla con la
-  voz de una muchacha de Medellín y tú haces de cliente por el micrófono. Ella
-  va llamando a sus herramientas (`anotar_dato`, `agendar_accion`,
-  `cerrar_llamada`) y eso es lo que llena la ficha. El prompt y la voz están
-  en [`lib/sofi/agente.ts`](./lib/sofi/agente.ts); el agente se crea o se
-  actualiza solo en tu cuenta la primera vez que alguien llama.
+- **En vivo.** Con una llave de ElevenLabs, «Llamar» abre una conversación
+  de voz real con ElevenLabs Conversational AI: Sofi habla con la voz de una
+  muchacha de Medellín y tú haces de cliente por el micrófono. Ella va
+  llamando a sus herramientas (`anotar_dato`, `agendar_accion`,
+  `cerrar_llamada`) y eso es lo que llena la ficha. La llave puede ir en el
+  servidor (`ELEVENLABS_API_KEY`, en `.env.local` o en Vercel) o pegarla tú
+  en el panel de la tecla «a»: se guarda solo en tu navegador y viaja al
+  servidor en cada llamada para usarse, nunca se almacena. El prompt y la voz
+  están en [`lib/sofi/agente.ts`](./lib/sofi/agente.ts); el agente se crea o
+  se actualiza solo en tu cuenta la primera vez que alguien llama.
 - **Grabada.** La llamada a don Andrés, del Sancho Paisa, está escrita en
   [`lib/sofi/guion.ts`](./lib/sofi/guion.ts) y su audio vive en
   `public/sofi/audio/`. Suena idéntica en cada toma, no gasta cuota y no

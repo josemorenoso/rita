@@ -37,6 +37,8 @@ export class LlamadaEnVivo implements Motor {
   constructor(
     private cotizacionId: string,
     private oyente: Oyente,
+    /** Llave del visitante, si el servidor no tiene la suya. */
+    private llave?: string,
   ) {}
 
   frecuencias() {
@@ -67,7 +69,7 @@ export class LlamadaEnVivo implements Motor {
     const r = await fetch("/api/sofi/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cotizacionId: this.cotizacionId }),
+      body: JSON.stringify({ cotizacionId: this.cotizacionId, llave: this.llave || undefined }),
     });
     const sesion = (await r.json()) as Sesion;
     if (!r.ok) throw new Error(sesion.error || "No se pudo abrir la sesión");

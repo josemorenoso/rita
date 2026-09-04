@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Instrument_Sans, Press_Start_2P } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Press_Start_2P } from "next/font/google";
 import { BRAND } from "@/lib/leads/brand";
 import "./globals.css";
 import "./leadhunter.css";
@@ -23,11 +23,11 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
-/** La sans de lo que se dice en voz alta en la pantalla de Sofi. */
-const voz = Instrument_Sans({
-  weight: ["500", "600"],
+/** La pantalla de Sofi va en claro y con Inter, como el centro de cobros. */
+const sans = Inter({
+  weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin"],
-  variable: "--font-voz",
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -42,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${pixel.variable} ${mono.variable} ${voz.variable}`}>
+    <html lang="es" className={`${pixel.variable} ${mono.variable} ${sans.variable}`}>
       <body>{children}</body>
     </html>
   );
