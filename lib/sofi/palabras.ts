@@ -29,6 +29,10 @@ function menorDeMil(n: number): string {
   return `${CENTENAS[c]}${r ? ` ${menorDeMil(r)}` : ""}`;
 }
 
+/** «uno» delante de un nombre se apocopa: setecientos UN mil, treinta y UN
+    mil. Solo «veintiuno» conserva la tilde al apocoparse. */
+const apocope = (s: string) => s.replace(/veintiuno$/, "veintiún").replace(/uno$/, "un");
+
 /** 3049920 → «tres millones cuarenta y nueve mil novecientos veinte». */
 export function numeroEnPalabras(valor: number): string {
   const n = Math.floor(Math.abs(valor));
@@ -37,8 +41,8 @@ export function numeroEnPalabras(valor: number): string {
   const millones = Math.floor(n / 1_000_000);
   const miles = Math.floor((n % 1_000_000) / 1000);
   const resto = n % 1000;
-  if (millones > 0) partes.push(millones === 1 ? "un millón" : `${menorDeMil(millones).replace(/uno$/, "ún")} millones`);
-  if (miles > 0) partes.push(miles === 1 ? "mil" : `${menorDeMil(miles).replace(/uno$/, "ún")} mil`);
+  if (millones > 0) partes.push(millones === 1 ? "un millón" : `${apocope(menorDeMil(millones))} millones`);
+  if (miles > 0) partes.push(miles === 1 ? "mil" : `${apocope(menorDeMil(miles))} mil`);
   if (resto > 0) partes.push(menorDeMil(resto));
   return partes.join(" ");
 }

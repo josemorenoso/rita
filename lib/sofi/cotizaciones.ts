@@ -46,6 +46,21 @@ const QUESO = P("Queso campesino 2,5 kg", 54_000, "un bloque de queso campesino"
 export const COTIZACIONES: Cotizacion[] = [
   /* ── La cola de hoy, en el orden en que Sofi va llamando ── */
   {
+    id: "cot-137",
+    contacto: "Luis Reinaldo Moreno Solis",
+    trato: "don Luis",
+    negocio: "Asadero El Portal",
+    tipo: "Asadero",
+    cargo: "Dueño",
+    barrio: "La América",
+    telefono: "304 218 63 05",
+    canal: "WhatsApp",
+    hace: 14,
+    lineas: [ACEITE_20(2), CHORIZO(25), SERVILLETA(4), PAPEL(1)],
+    descuento: 0.1,
+    incentivo: "diez por ciento y el envío gratis hasta La América",
+  },
+  {
     id: "cot-118",
     contacto: "Marta Ocampo",
     trato: "doña Marta",

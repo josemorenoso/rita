@@ -75,8 +75,16 @@ export class LlamadaEnVivo implements Motor {
   async iniciar() {
     this.oyente.onFase("marcando");
 
-    // El timbre arranca ya, mientras se pide el token: en una llamada de
-    // verdad tampoco descuelgan al primer tono.
+    // El audio se abre aquí, pegado al clic, que es el gesto que el navegador
+    // exige. Después ya se puede esperar sin que se cierre la puerta.
+    this.abrirAudio();
+
+    // Primero el micrófono: si no lo pedimos a la cara, el navegador que lo
+    // tenga bloqueado no enseña ningún diálogo y la llamada se muere muda.
+    await this.pedirMicrofono();
+
+    // Y ahora sí timbra, mientras se pide el token: en una llamada de verdad
+    // tampoco descuelgan al primer tono.
     const timbrando = this.timbrar();
 
     const r = await fetch("/api/sofi/session", {
@@ -87,7 +95,9 @@ export class LlamadaEnVivo implements Motor {
     const sesion = (await r.json()) as Sesion;
     if (!r.ok) {
       this.callarTimbre();
-      throw new Error(sesion.error || "No se pudo abrir la sesión");
+      // El detalle es feo, pero delante de la cámara vale más saber qué pasó
+      // que un mensaje bonito que no dice nada.
+      throw new Error([sesion.error || "No se pudo abrir la sesión", sesion.detalle].filter(Boolean).join(" · "));
     }
 
     const { Conversation } = await import("@elevenlabs/client");
@@ -185,18 +195,49 @@ export class LlamadaEnVivo implements Motor {
     return Math.abs(dicho - exacto) / exacto <= 0.05 ? exacto : Math.round(dicho);
   }
 
-  /* ── El timbre: WebAudio, sin ficheros. Se crea con el clic en «Llamar»,
-        que es el gesto que el navegador exige para abrir audio. ── */
+  /* ── Micrófono y timbre ── */
 
-  private async timbrar() {
-    if (this.opciones.timbre === false) return;
+  /** El permiso, pedido de frente. Si el navegador lo tiene bloqueado no
+      aparece ningún diálogo, así que hay que decirle a la persona dónde
+      desbloquearlo en vez de dejar la llamada colgada sin explicación. */
+  private async pedirMicrofono() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Este navegador no deja usar el micrófono. Abre la página en Chrome o Edge, en http://localhost.");
+    }
+    try {
+      const pista = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Solo queríamos el permiso: el SDK abre su propia pista.
+      pista.getTracks().forEach((t) => t.stop());
+    } catch (e) {
+      const nombre = (e as { name?: string })?.name;
+      if (nombre === "NotAllowedError" || nombre === "SecurityError") {
+        throw new Error("El navegador tiene bloqueado el micrófono. Pulsa el candado de la barra de direcciones → Micrófono → Permitir, y vuelve a llamar.");
+      }
+      if (nombre === "NotFoundError" || nombre === "OverconstrainedError") {
+        throw new Error("No encuentro ningún micrófono conectado.");
+      }
+      throw new Error(`No se pudo abrir el micrófono: ${(e as Error)?.message ?? String(e)}`);
+    }
+  }
+
+  /** El audio de los tonos: WebAudio, sin ficheros. Se abre pegado al clic en
+      «Llamar», que es el gesto que el navegador exige. */
+  private abrirAudio() {
     try {
       const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new Ctx();
       this.sonidos = new Sonidos(this.ctx);
-      await this.sonidos.timbre(TIMBRES_MINIMOS);
     } catch {
-      /* sin audio: la llamada sigue igual, solo que muda hasta que conecta */
+      /* sin audio: la llamada sigue igual, solo que sin tonos */
+    }
+  }
+
+  private async timbrar() {
+    if (this.opciones.timbre === false) return;
+    try {
+      await this.sonidos?.timbre(TIMBRES_MINIMOS);
+    } catch {
+      /* da igual: el timbre es adorno */
     }
   }
 
