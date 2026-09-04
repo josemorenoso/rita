@@ -100,7 +100,11 @@ export default function Sofi() {
       .then((j: { configurado?: boolean }) => setServidorConLlave(Boolean(j.configurado)))
       .catch(() => setServidorConLlave(false));
     try {
-      setLlave(window.localStorage.getItem(CLAVE_LLAVE) ?? "");
+      // Una llave guardada que no empiece por «sk_» es la ID, no la llave: se
+      // tira en vez de dejar que reviente la llamada.
+      const guardada = window.localStorage.getItem(CLAVE_LLAVE) ?? "";
+      if (guardada && !guardada.startsWith("sk_")) window.localStorage.removeItem(CLAVE_LLAVE);
+      else setLlave(guardada);
     } catch {
       /* sin almacenamiento: se pide la llave cada vez */
     }

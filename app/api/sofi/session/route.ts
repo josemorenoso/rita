@@ -26,6 +26,20 @@ export async function POST(request: Request) {
   const llave = llaveDelServidor() || cuerpo.llave?.trim() || "";
   if (!llave) return Response.json({ error: "Falta la llave de ElevenLabs" }, { status: 503 });
 
+  // El panel de ElevenLabs enseña dos cadenas parecidas y es fácil copiar la
+  // que no es: la ID de la llave (hexadecimal) en vez de la llave. Se dice
+  // aquí, en una línea, en vez de dejar que la API conteste con su error.
+  if (!llave.startsWith("sk_")) {
+    return Response.json(
+      {
+        error: "Esa no es la llave de ElevenLabs, es la ID de la llave",
+        detalle:
+          "La llave empieza por «sk_» y solo se ve una vez, cuando se crea o se rota. En elevenlabs.io → tu perfil → API Keys, crea una nueva y copia el valor completo.",
+      },
+      { status: 400 },
+    );
+  }
+
   try {
     const agentId = await asegurarAgente(llave);
     const sesion = await abrirSesion(llave, agentId);
